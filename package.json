@@ -1,0 +1,7 @@
+{
+  "name": "hr-tool-demo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}

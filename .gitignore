@@ -1,1 +1,9 @@
 .claude/settings.local.json
+
+# JS/TS
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+.env
+

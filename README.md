@@ -13,13 +13,17 @@ specs/
   use-cases/
     UC-001-login.md            # đăng nhập (Google SSO)
     UC-002-attendance-check.md # chấm công vào/ra
-    UC-004-request-leave.md    # xin nghỉ phép
+    UC-004-request-leave.md    # xin nghỉ phép — spec chi tiết, status approved
     UC-005-approve-leave.md    # duyệt/từ chối nghỉ phép (manager)
     UC-006-monthly-report.md   # báo cáo tháng (HR)
   entities/
     entity-model.md            # ER diagram + attribute table (Employee, Attendance, LeaveRequest, ApprovalLog)
   diagrams/
     use-cases.puml             # PlantUML use case diagram (actor <-> UC)
+apps/
+  api/                         # NestJS + Drizzle ORM + PostgreSQL — implement UC-004
+  web/                         # Next.js App Router — trang /leave-requests/new
+docker-compose.yml             # Postgres cho local dev (cổng 5433)
 .claude/skills/                # speckit skills cho Claude Code (/specify, /plan, /tasks...)
 .specify/                      # templates, scripts, constitution cho spec-kit workflow
 ```
@@ -151,4 +155,84 @@ Model → Diagram theo một chiều duy nhất.
 ```bash
 git add specs/
 git commit -m "feat(BR-001): entity model + use case diagram, no-holiday-MVP decision"
+```
+
+## Day 03 — UC-004 từ spec đến code chạy được (plan → tasks → implement)
+
+Mục tiêu Day 03: chứng minh spec đủ chi tiết để build trực tiếp — đi đúng
+chuỗi **use-case-spec → `/plan` → `/tasks` → `/implement`**, không nhảy cóc
+bước nào.
+
+### 1. Viết chi tiết UC-004 (`/aiup-core:use-case-spec UC-004`)
+
+Từ stub Day 01, elaborate `UC-004-request-leave.md` thành spec đầy đủ:
+`Trigger` → `Preconditions` → `Main Flow` (6 bước) → `Alternative Flows` →
+4 `Exceptions` (E1-E4, mỗi cái có message chính xác) → 5 `Acceptance
+Criteria` dạng Given-When-Then (AC-1..AC-5). `Status` chuyển `draft` →
+`approved`.
+
+### 2. `/plan UC-004`
+
+Repo lúc này chưa có dòng code nào — plan mode hỏi rõ trước khi giả định:
+
+- **Stack**: NestJS + Next.js App Router (TypeScript monorepo, npm
+  workspaces), chọn vì khớp sẵn với plugin đồng hành `aiup-nestjs-nextjs`.
+- **Độ chân thực**: demo-level — mock "đăng nhập" (UC-001 chưa build) và
+  mock gửi email, nhưng cả hai đều được thiết kế như seam có thể thay thế
+  sau, không lẫn vào business logic.
+- **Persistence**: PostgreSQL qua Drizzle ORM, migration sinh tự động
+  (`drizzle-kit generate`), không hand-write SQL.
+
+Plan chỉ động tới đúng 2 entity mà UC-004 cần — `Employee` +
+`LeaveRequest` — không đụng `Attendance`/`ApprovalLog`/`MonthlyReport`.
+
+### 3. `/tasks UC-004`
+
+7 task, theo layer thay vì theo module NestJS:
+
+1. Migration: `leave_request` (không kèm `approval_logs` — UC-004 không
+   dùng tới, để dành cho UC-005)
+2. Entity/response types (TypeScript)
+3. API `POST /api/leave-requests`
+4. Validation layer (E1-E4)
+5. Email notification (stub demo)
+6. UI form
+7. Test suite (5 AC)
+
+(Task "update Dashboard" trong bản nháp ban đầu bị bỏ — Dashboard không nằm
+trong 5 UC đã chốt, ngoài scope UC-004.)
+
+### 4. `/implement` + adversarial review
+
+Implement xong 7 task, chạy `/codex:adversarial-review` trước khi commit.
+Kết quả `needs-attention`, 3 lỗi:
+
+| Lỗi | Sửa |
+|---|---|
+| Header `x-demo-employee-id` có thể giả mạo danh tính bất kỳ nhân viên nào | `main.ts` từ chối khởi động nếu `NODE_ENV=production` — demo auth không thể lọt ra ngoài môi trường demo |
+| Check-trùng-lịch (E4) và insert tách rời → race condition khi 2 request cùng lúc | Gộp vào 1 transaction Postgres với `pg_advisory_xact_lock` theo `employeeId` |
+| Có `schema.ts` nhưng chưa có migration thật, deploy mới sẽ lỗi | Chạy `drizzle-kit generate` thật, đọc SQL sinh ra trước khi commit |
+
+### 5. Verify thật (không chỉ unit test)
+
+```bash
+docker compose up -d                 # Postgres tại localhost:5433
+cd apps/api
+npx drizzle-kit migrate
+npm run db:seed                      # 5 nhân viên demo, wired sẵn cho AC-1/3/4/5
+npm test                             # 5/5 pass
+npm run start:dev                    # API :3001
+cd ../web && npm run dev             # Web :3000 (hoặc port kế tiếp nếu bị chiếm)
+```
+
+Gọi trực tiếp `curl` cho cả 5 AC qua Postgres thật — đúng 100% cả HTTP
+status lẫn message lỗi tiếng Việt; kiểm DB xác nhận `approver_id` vẫn NULL
+và `annual_leave_balance` không bị trừ lúc submit (chỉ trừ khi UC-005
+duyệt).
+
+### 6. Commit chốt Day 03
+
+```bash
+git add apps/ docker-compose.yml package.json package-lock.json specs/use-cases/UC-004-request-leave.md
+git commit -m "feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)"
 ```
