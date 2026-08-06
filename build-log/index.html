@@ -1,0 +1,811 @@
+<style>
+  :root{
+    --ink:#0E1613;
+    --ink-2:#17221D;
+    --ink-3:#20302A;
+    --paper:#EEF1EA;
+    --paper-2:#E3E8DF;
+    --accent:#C96A2E;
+    --accent-strong:#AD5722;
+    --teal:#3E8F81;
+    --rust:#B3492E;
+    --fg:#152420;
+    --fg-dim:#4C5B53;
+    --bg: var(--paper);
+    --bg-panel:#FBFBF7;
+    --bg-panel-2:#F3F4EE;
+    --border: rgba(15,26,20,0.15);
+    --border-soft: rgba(15,26,20,0.08);
+    --code-bg:#101A15;
+    --code-fg:#D9E6DD;
+    --code-dim:#7E9A8A;
+    --shadow: 0 1px 2px rgba(15,26,20,.06), 0 8px 24px -12px rgba(15,26,20,.18);
+    --font-mono: "IBM Plex Mono","JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --font-sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg: var(--ink);
+      --bg-panel: var(--ink-2);
+      --bg-panel-2: var(--ink-3);
+      --fg:#E7EEE8;
+      --fg-dim:#9FB2A7;
+      --border: rgba(231,238,232,.16);
+      --border-soft: rgba(231,238,232,.09);
+      --accent:#E08A48;
+      --accent-strong:#F0A264;
+      --teal:#5FB4A4;
+      --rust:#D6684C;
+      --code-bg:#0A100D;
+      --code-fg:#D7E5DC;
+      --code-dim:#7E9A8A;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -14px rgba(0,0,0,.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: var(--ink);
+    --bg-panel: var(--ink-2);
+    --bg-panel-2: var(--ink-3);
+    --fg:#E7EEE8;
+    --fg-dim:#9FB2A7;
+    --border: rgba(231,238,232,.16);
+    --border-soft: rgba(231,238,232,.09);
+    --accent:#E08A48;
+    --accent-strong:#F0A264;
+    --teal:#5FB4A4;
+    --rust:#D6684C;
+    --code-bg:#0A100D;
+    --code-fg:#D7E5DC;
+    --code-dim:#7E9A8A;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -14px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --bg: var(--paper);
+    --bg-panel:#FBFBF7;
+    --bg-panel-2:#F3F4EE;
+    --fg:#152420;
+    --fg-dim:#4C5B53;
+    --border: rgba(15,26,20,0.15);
+    --border-soft: rgba(15,26,20,0.08);
+    --accent:#C96A2E;
+    --accent-strong:#AD5722;
+    --teal:#3E8F81;
+    --rust:#B3492E;
+    --code-bg:#101A15;
+    --code-fg:#D9E6DD;
+    --code-dim:#7E9A8A;
+    color-scheme: light;
+  }
+
+  *{box-sizing:border-box;}
+  ::selection{ background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(0deg, var(--border-soft) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, var(--border-soft) 0 1px, transparent 1px 96px),
+      var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a{ color: var(--accent-strong); }
+  a:focus-visible, button:focus-visible, .navlink:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  h1,h2,h3{ font-family: var(--font-mono); font-weight:700; text-wrap: balance; letter-spacing:-0.01em; margin:0; }
+
+  .wrap{ max-width: 62rem; margin:0 auto; padding: 0 1.5rem; }
+  .wrap-wide{ max-width: 78rem; margin:0 auto; padding: 0 1.5rem; }
+
+  /* ---------- top nav ---------- */
+  .topbar{
+    position: sticky; top:0; z-index:20;
+    backdrop-filter: blur(10px) saturate(1.1);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .topbar-inner{
+    max-width:62rem; margin:0 auto; padding: 0.7rem 1.5rem;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  }
+  .brand{ font-family: var(--font-mono); font-weight:700; font-size:.82rem; letter-spacing:.02em; color: var(--fg-dim); }
+  .brand b{ color: var(--fg); }
+  .navlinks{ display:flex; gap:.4rem; }
+  .navlink{
+    font-family: var(--font-mono); font-size:.72rem; font-weight:700; letter-spacing:.06em;
+    text-decoration:none; color: var(--fg-dim);
+    border:1px solid var(--border); border-radius:999px; padding:.32rem .7rem;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .navlink:hover{ color:var(--fg); border-color: var(--accent); background: var(--bg-panel); }
+
+  /* ---------- hero ---------- */
+  .hero{ padding: 4.2rem 0 2.6rem; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:.5rem;
+    font-family: var(--font-mono); font-size:.72rem; font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase; color: var(--accent-strong);
+    margin-bottom: 1rem;
+  }
+  .eyebrow::before{ content:""; width:1.4rem; height:1px; background: currentColor; opacity:.6; }
+  .hero h1{ font-size: clamp(2rem, 4.6vw, 3.15rem); line-height:1.08; max-width: 18ch; }
+  .hero p.lede{
+    margin-top:1.1rem; max-width:52ch; font-size:1.08rem; color: var(--fg-dim);
+  }
+  .hero-meta{
+    margin-top:1.6rem; display:flex; flex-wrap:wrap; gap: .5rem 1.6rem;
+    font-family: var(--font-mono); font-size:.78rem; color: var(--fg-dim);
+  }
+  .hero-meta strong{ color: var(--fg); font-weight:700; }
+
+  /* ---------- diagram shell ---------- */
+  .diagram-panel{
+    margin: 1.7rem 0; background: var(--bg-panel);
+    border:1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .diagram-panel .diagram-scroll{ overflow-x:auto; }
+  .diagram-panel svg{ display:block; min-width: 640px; width:100%; height:auto; }
+  figcaption.diagram-caption{
+    font-family: var(--font-mono); font-size:.74rem; color: var(--fg-dim);
+    padding: .85rem 1.1rem; border-top:1px solid var(--border-soft);
+  }
+  figure{ margin:0; }
+  .dg-node-title{ font: 700 12.5px var(--font-mono); fill: currentColor; }
+  .dg-node-sub{ font: 400 10.5px var(--font-mono); fill: currentColor; opacity:.62; }
+  .dg-tag{ font: 700 9.5px var(--font-mono); letter-spacing:.08em; }
+  .dg-caption-inline{ font: 400 10.5px var(--font-sans); fill: currentColor; opacity:.7; }
+
+  /* ---------- sections ---------- */
+  section.day{ padding: 3.4rem 0; border-top: 1px solid var(--border-soft); }
+  .day-head{ display:flex; align-items:baseline; gap: .9rem; margin-bottom: .3rem; }
+  .day-num{ font-family: var(--font-mono); font-size:.78rem; font-weight:700; color: var(--accent-strong); letter-spacing:.1em; }
+  section.day h2{ font-size: clamp(1.5rem, 2.8vw, 2rem); }
+  .day-sub{ color: var(--fg-dim); max-width: 60ch; margin-top:.6rem; }
+
+  .step{ display:grid; grid-template-columns: 2.1rem 1fr; gap: .9rem; margin-top: 1.9rem; }
+  .step-mark{
+    width:2.1rem; height:2.1rem; border-radius:8px;
+    border:1px solid var(--border); background: var(--bg-panel);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-mono); font-size:.78rem; font-weight:700; color: var(--fg-dim);
+  }
+  .step h3{ font-size:1rem; font-weight:700; }
+  .step p{ margin:.4rem 0 0; color: var(--fg-dim); max-width: 62ch; }
+
+  /* ---------- code / terminal blocks ---------- */
+  .cmd{
+    margin-top:.85rem; background: var(--code-bg); color: var(--code-fg);
+    border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,.25);
+    box-shadow: var(--shadow);
+  }
+  .cmd-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.5rem .8rem; border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .cmd-dots{ display:flex; gap:.32rem; }
+  .cmd-dots span{ width:.55rem; height:.55rem; border-radius:50%; background: rgba(255,255,255,.18); }
+  .cmd-label{ font-family: var(--font-mono); font-size:.68rem; color: var(--code-dim); letter-spacing:.04em; }
+  .copy-btn{
+    font-family: var(--font-mono); font-size:.66rem; font-weight:700; letter-spacing:.04em;
+    background: transparent; color: var(--code-dim); border:1px solid rgba(255,255,255,.16);
+    border-radius:6px; padding:.22rem .55rem; cursor:pointer;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .copy-btn:hover{ color: var(--code-fg); border-color: rgba(255,255,255,.4); }
+  .cmd pre{ margin:0; padding: .9rem 1rem 1.05rem; overflow-x:auto; font-family: var(--font-mono); font-size:.84rem; line-height:1.7; }
+  .cmd pre code{ display:block; white-space:pre; }
+  .cmd .l::before{ content:"$ "; color: var(--code-dim); }
+  .cmd .k::before{ content:"\203A "; color: var(--code-dim); }
+  .cmd .c{ color: var(--code-dim); }
+  .cmd .c::before{ content: none; }
+
+  /* ---------- callouts ---------- */
+  .callout{
+    margin-top: 1.4rem; border-radius: 12px; padding: 1rem 1.2rem;
+    border:1px solid var(--border);
+    display:grid; grid-template-columns: auto 1fr; gap:.8rem; align-items:start;
+  }
+  .callout .tag{
+    font-family: var(--font-mono); font-size:.66rem; font-weight:700; letter-spacing:.09em;
+    padding:.2rem .5rem; border-radius:5px; white-space:nowrap; margin-top:.1rem;
+  }
+  .callout.gap{ background: color-mix(in srgb, var(--rust) 10%, var(--bg-panel)); border-color: color-mix(in srgb, var(--rust) 45%, var(--border)); }
+  .callout.gap .tag{ background: var(--rust); color:#fff; }
+  .callout.decision{ background: color-mix(in srgb, var(--teal) 10%, var(--bg-panel)); border-color: color-mix(in srgb, var(--teal) 45%, var(--border)); }
+  .callout.decision .tag{ background: var(--teal); color:#fff; }
+  .callout p{ margin:0; color: var(--fg); font-size:.94rem; }
+  .callout p.who{ margin-top:.35rem; font-family: var(--font-mono); font-size:.72rem; color: var(--fg-dim); }
+
+  /* ---------- entity cards ---------- */
+  .entity-grid{
+    margin-top:1.6rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr));
+    gap:.85rem;
+  }
+  .entity-card{
+    background: var(--bg-panel); border-radius:10px; padding:.9rem 1rem;
+    border:1px solid var(--border);
+  }
+  .entity-card.persisted{ border-style:solid; }
+  .entity-card.computed{ border-style:dashed; }
+  .entity-row{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .entity-name{ font-family: var(--font-mono); font-weight:700; font-size:.86rem; }
+  .kind{ font-family: var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.08em; padding:.14rem .42rem; border-radius:4px; }
+  .kind.table{ background: color-mix(in srgb, var(--teal) 22%, transparent); color: var(--teal); }
+  .kind.log{ background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent-strong); }
+  .kind.view{ background: color-mix(in srgb, var(--rust) 18%, transparent); color: var(--rust); }
+  .entity-card p{ margin:.5rem 0 0; font-size:.83rem; color: var(--fg-dim); }
+  .legend{ margin-top:.7rem; font-family: var(--font-mono); font-size:.72rem; color: var(--fg-dim); }
+  .legend .sw{ display:inline-block; width:1.1em; border-top:2px solid var(--fg-dim); vertical-align:middle; margin-right:.35em; }
+  .legend .sw.dash{ border-top-style:dashed; }
+
+  /* ---------- file tree ---------- */
+  .tree{
+    margin-top:1.4rem; background: var(--code-bg); color: var(--code-fg);
+    border-radius:10px; padding:1.1rem 1.3rem; font-family: var(--font-mono); font-size:.82rem;
+    line-height:1.85; overflow-x:auto; box-shadow: var(--shadow);
+  }
+  .tree .dim{ color: var(--code-dim); }
+  .tree .new{ color: var(--accent); font-weight:700; }
+
+  /* ---------- commit table ---------- */
+  .commit-table{ margin-top:1.5rem; width:100%; border-collapse:collapse; font-size:.86rem; }
+  .commit-table th{
+    text-align:left; font-family: var(--font-mono); font-size:.68rem; letter-spacing:.08em;
+    color: var(--fg-dim); font-weight:700; padding: 0 .8rem .55rem; border-bottom:1px solid var(--border);
+  }
+  .commit-table td{ padding:.65rem .8rem; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  .commit-table tr:last-child td{ border-bottom:none; }
+  .commit-table .hash{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--accent-strong); white-space:nowrap; }
+  .commit-table .day-pill{
+    font-family: var(--font-mono); font-size:.66rem; font-weight:700; letter-spacing:.05em;
+    padding:.16rem .5rem; border-radius:999px; border:1px solid var(--border); color: var(--fg-dim); white-space:nowrap;
+  }
+  .commit-table .msg{ color: var(--fg-dim); }
+
+  footer{ padding: 3rem 0 4rem; border-top:1px solid var(--border-soft); }
+  footer .foot-row{ display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:baseline; justify-content:space-between; }
+  footer .foot-note{ font-family: var(--font-mono); font-size:.76rem; color: var(--fg-dim); max-width:44ch; }
+  footer a.repo{ font-family: var(--font-mono); font-size:.82rem; font-weight:700; }
+
+  [data-reveal]{ opacity:1; transform:none; }
+  @media (prefers-reduced-motion: no-preference){
+    [data-reveal]{ opacity:0; transform: translateY(10px); transition: opacity .55s ease, transform .55s ease; }
+    [data-reveal].in{ opacity:1; transform:none; }
+  }
+
+  @media (max-width: 640px){
+    .hero{ padding: 3rem 0 2rem; }
+    .topbar-inner{ padding:.6rem 1rem; }
+    section.day{ padding: 2.4rem 0; }
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">hr-tool-demo <b>/ build log</b></span>
+    <nav class="navlinks">
+      <a class="navlink" href="#day01">NGÀY 01</a>
+      <a class="navlink" href="#day02">NGÀY 02</a>
+      <a class="navlink" href="#structure">CẤU TRÚC</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <section class="hero">
+    <p class="eyebrow">Spec-Driven Development · HR Tool</p>
+    <h1>Hai ngày, một chuỗi spec<br>truy vết được đầu&#8209;cuối</h1>
+    <p class="lede">
+      Từ 90 phút nói chuyện với HR đến entity model chốt bản — mọi quyết định,
+      kể cả một cái bị bỏ sót giữa chừng, đều nằm lại trong git history thay vì
+      trôi mất trong hội thoại.
+    </p>
+    <div class="hero-meta">
+      <span>Dự án <strong>hr-tool-demo</strong></span>
+      <span>Chốt <strong>2026&#8209;08&#8209;06</strong></span>
+      <span><strong>4</strong> commit</span>
+      <span><strong>5</strong> use case, <strong>5</strong> entity</span>
+    </div>
+  </section>
+
+  <figure class="diagram-panel" data-reveal>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 1040 210" role="img" aria-label="Toàn cảnh quy trình 2 ngày: trao đổi với HR, viết BR-001 và 5 use case ở ngày 1; cài plugin AIUP, sinh diagram và entity model, phát hiện thiếu xử lý ngày lễ rồi chốt quyết định ở ngày 2, kết thúc bằng 4 commit lên GitHub.">
+        <g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55">
+          <line x1="10" y1="46" x2="10" y2="54"></line>
+          <line x1="10" y1="50" x2="390" y2="50"></line>
+          <line x1="390" y1="46" x2="390" y2="54"></line>
+          <line x1="430" y1="46" x2="430" y2="54"></line>
+          <line x1="430" y1="50" x2="1020" y2="50"></line>
+          <line x1="1020" y1="46" x2="1020" y2="54"></line>
+        </g>
+        <text x="200" y="34" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".75">NGÀY 01</text>
+        <text x="725" y="34" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".75">NGÀY 02</text>
+
+        <!-- nodes -->
+        <g font-family="inherit">
+          <!-- node 1 -->
+          <rect x="10" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+          <text x="95" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">90 PHÚT</text>
+          <text x="95" y="118" text-anchor="middle" class="dg-node-title">Trao đổi với HR</text>
+
+          <!-- node 2 -->
+          <rect x="220" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+          <text x="305" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">BR&#8209;001</text>
+          <text x="305" y="118" text-anchor="middle" class="dg-node-title">+ 5 Use Case</text>
+
+          <!-- node 3 -->
+          <rect x="430" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+          <text x="515" y="97" text-anchor="middle" class="dg-tag" fill="var(--accent)" opacity=".9">AIUP</text>
+          <text x="515" y="118" text-anchor="middle" class="dg-node-title">Diagram + Entity</text>
+
+          <!-- node 4 -->
+          <rect x="640" y="70" width="170" height="68" rx="10" fill="none" stroke="var(--rust)" stroke-width="1.4"></rect>
+          <text x="725" y="97" text-anchor="middle" class="dg-tag" fill="var(--rust)">REVIEW</text>
+          <text x="725" y="118" text-anchor="middle" class="dg-node-title" style="fill:var(--rust)">Gap: ngày lễ</text>
+
+          <!-- node 5 -->
+          <rect x="850" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+          <text x="935" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">4 COMMIT</text>
+          <text x="935" y="118" text-anchor="middle" class="dg-node-title">specs/ hoàn chỉnh</text>
+        </g>
+
+        <!-- arrows -->
+        <g stroke="currentColor" stroke-width="1.4" opacity=".7">
+          <line x1="180" y1="104" x2="216" y2="104"></line>
+          <line x1="390" y1="104" x2="426" y2="104"></line>
+          <line x1="600" y1="104" x2="636" y2="104"></line>
+          <line x1="810" y1="104" x2="846" y2="104"></line>
+        </g>
+        <g fill="currentColor" opacity=".8">
+          <polygon points="220,104 210,99.5 210,108.5"></polygon>
+          <polygon points="430,104 420,99.5 420,108.5"></polygon>
+          <polygon points="640,104 630,99.5 630,108.5"></polygon>
+          <polygon points="850,104 840,99.5 840,108.5"></polygon>
+        </g>
+
+        <text x="520" y="182" text-anchor="middle" class="dg-caption-inline" fill="currentColor">
+          Điểm neo của toàn bộ chuỗi: BR&#8209;001 — mọi thứ phía sau đều trace ngược được về đây.
+        </text>
+      </svg>
+    </div>
+  </figure>
+
+  <!-- ============ DAY 01 ============ -->
+  <section class="day" id="day01">
+    <div class="day-head">
+      <span class="day-num">NGÀY 01</span>
+      <h2>Chốt Business Requirement &amp; 5 Use Case</h2>
+    </div>
+    <p class="day-sub">
+      Mục tiêu: biến một buổi nói chuyện thành tài liệu spec có thể trace được,
+      làm nền cho mọi bước thiết kế/implement sau này.
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Thu thập bối cảnh nghiệp vụ</h3>
+        <p>HR đang chấm công và xét nghỉ phép bằng Excel + Google Form, cuối tháng mất
+        gần 2 ngày để tổng hợp, đối chiếu, sửa lỗi nhập sai. CEO yêu cầu có tool nội bộ
+        dùng được ngay trong tuần sau.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3>Viết <code>BR-001-hr-tool.md</code></h3>
+        <p>Chốt sau 90 phút trao đổi với chị Hà (HR): Background, Goal, 3 Success Metrics
+        đo được, In&nbsp;Scope / Out&nbsp;of&nbsp;Scope cho MVP tuần 1, và Open Questions
+        cho những điểm chưa chốt.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3>Rã BR-001 thành 5 Use Case</h3>
+        <p>Mỗi UC một file trong <code>specs/use-cases/</code>, gắn ngược
+        <code>Liên quan tới BR: BR-001</code>, có owner riêng và status <code>draft</code>.
+        UC-002 và UC-003 (check-in/check-out) được gộp lại vì flow gần như giống hệt nhau.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3>Commit chốt Ngày 01</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(BR-001): initial requirement catalog, 5 use cases&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(BR-001): initial requirement catalog, 5 use cases"</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <figure class="diagram-panel" data-reveal>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 900 400" role="img" aria-label="BR-001 nhận vào từ buổi trao đổi 90 phút, tỏa ra 5 use case UC-001, UC-002, UC-004, UC-005, UC-006, tất cả liên kết hai chiều về lại BR-001, rồi hội tụ thành một commit duy nhất.">
+          <!-- meeting -->
+          <rect x="320" y="10" width="260" height="56" rx="9" fill="none" stroke="currentColor" opacity=".8"></rect>
+          <text x="450" y="34" text-anchor="middle" class="dg-node-title">Chị Hà × Tuấn</text>
+          <text x="450" y="50" text-anchor="middle" class="dg-node-sub">90 phút trao đổi · 2026&#8209;08&#8209;06</text>
+
+          <line x1="450" y1="66" x2="450" y2="96" stroke="currentColor" stroke-width="1.4" opacity=".7"></line>
+          <polygon points="450,100 445,90 455,90" fill="currentColor" opacity=".8"></polygon>
+
+          <!-- BR-001 -->
+          <rect x="300" y="100" width="300" height="66" rx="9" fill="none" stroke="var(--accent)" stroke-width="1.6"></rect>
+          <text x="450" y="128" text-anchor="middle" class="dg-node-title" style="fill:var(--accent-strong)">BR-001-hr-tool.md</text>
+          <text x="450" y="146" text-anchor="middle" class="dg-node-sub">Background · Goal · Metrics · Scope</text>
+
+          <!-- fan lines -->
+          <g stroke="currentColor" stroke-width="1" opacity=".45">
+            <line x1="450" y1="166" x2="100" y2="228"></line>
+            <line x1="450" y1="166" x2="275" y2="228"></line>
+            <line x1="450" y1="166" x2="450" y2="228"></line>
+            <line x1="450" y1="166" x2="625" y2="228"></line>
+            <line x1="450" y1="166" x2="800" y2="228"></line>
+          </g>
+
+          <!-- UC boxes -->
+          <g>
+            <rect x="30" y="228" width="140" height="60" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+            <text x="100" y="253" text-anchor="middle" class="dg-node-sub" opacity=".6">UC-001</text>
+            <text x="100" y="271" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Login (SSO)</text>
+
+            <rect x="205" y="228" width="140" height="60" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+            <text x="275" y="253" text-anchor="middle" class="dg-node-sub" opacity=".6">UC-002</text>
+            <text x="275" y="271" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Chấm công</text>
+
+            <rect x="380" y="228" width="140" height="60" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+            <text x="450" y="253" text-anchor="middle" class="dg-node-sub" opacity=".6">UC-004</text>
+            <text x="450" y="271" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Xin nghỉ</text>
+
+            <rect x="555" y="228" width="140" height="60" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+            <text x="625" y="253" text-anchor="middle" class="dg-node-sub" opacity=".6">UC-005</text>
+            <text x="625" y="271" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Duyệt nghỉ</text>
+
+            <rect x="730" y="228" width="140" height="60" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+            <text x="800" y="253" text-anchor="middle" class="dg-node-sub" opacity=".6">UC-006</text>
+            <text x="800" y="271" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Báo cáo tháng</text>
+          </g>
+
+          <!-- converge bracket -->
+          <g stroke="currentColor" stroke-width="1.2" opacity=".6">
+            <line x1="100" y1="288" x2="100" y2="302"></line>
+            <line x1="275" y1="288" x2="275" y2="302"></line>
+            <line x1="450" y1="288" x2="450" y2="302"></line>
+            <line x1="625" y1="288" x2="625" y2="302"></line>
+            <line x1="800" y1="288" x2="800" y2="302"></line>
+            <line x1="100" y1="302" x2="800" y2="302"></line>
+            <line x1="450" y1="302" x2="450" y2="330"></line>
+          </g>
+          <polygon points="450,336 445,326 455,326" fill="currentColor" opacity=".8"></polygon>
+
+          <!-- commit -->
+          <rect x="300" y="336" width="300" height="56" rx="9" fill="none" stroke="var(--teal)" stroke-width="1.6"></rect>
+          <text x="450" y="360" text-anchor="middle" class="dg-node-title" style="fill:var(--teal)">79b83df</text>
+          <text x="450" y="377" text-anchor="middle" class="dg-node-sub">initial requirement catalog, 5 use cases</text>
+        </svg>
+      </div>
+    </figure>
+    <p class="day-sub" style="margin-top:.6rem; font-size:.85rem;">
+      Mỗi đường nối UC ↔ BR-001 là liên kết hai chiều: đọc BR biết ngay phạm vi cần làm,
+      đọc UC biết rõ nó phục vụ requirement nào.
+    </p>
+  </section>
+
+  <!-- ============ DAY 02 ============ -->
+  <section class="day" id="day02">
+    <div class="day-head">
+      <span class="day-num">NGÀY 02</span>
+      <h2>Entity Model &amp; Use Case Diagram, dùng plugin AIUP</h2>
+    </div>
+    <p class="day-sub">
+      Từ 5 UC của ngày 1, dựng use case diagram (PlantUML) và entity model
+      (ER diagram) — bằng plugin <strong>AIUP</strong> (AI Unified Process) cho
+      Claude Code, thay vì viết tay từng bảng.
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Cài plugin AIUP</h3>
+        <p>Gõ thẳng trong Claude Code — đây là slash command của CLI, không phải lệnh shell,
+        nên không cần dấu <code>!</code>.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/plugin marketplace add ai-unified-process/marketplace
+/plugin install aiup-core@ai-unified-process-marketplace">COPY</button>
+          </div>
+          <pre><code class="k">/plugin marketplace add ai-unified-process/marketplace</code><code class="k">/plugin install aiup-core@ai-unified-process-marketplace</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3>Sinh Use Case Diagram &amp; Entity Model</h3>
+        <p>Hai skill của <code>aiup-core</code>, gọi qua slash command. Mặc định chúng đọc
+        <code>docs/requirements.md</code> — repo này dùng convention của speckit nên trỏ
+        sang <code>specs/business-requirements/BR-001-hr-tool.md</code> +
+        <code>specs/use-cases/*.md</code> làm nguồn thay thế.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/aiup-core:use-case-diagram
+/aiup-core:entity-model">COPY</button>
+          </div>
+          <pre><code class="k">/aiup-core:use-case-diagram</code><code class="k">/aiup-core:entity-model</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3>Review bản nháp — và một lỗ hổng lộ ra</h3>
+        <p>Bản nháp đầu của entity model ổn ở phần khung (Employee, Attendance,
+        LeaveRequest) — nhưng thiếu một rule quan trọng.</p>
+
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p>Tuấn phát hiện: use case xin nghỉ chưa xử lý <strong>ngày lễ quốc gia</strong>
+            khi tính số ngày nghỉ.</p>
+            <p class="who">Tuấn · review bản nháp entity model</p>
+          </div>
+        </div>
+
+        <div class="callout decision">
+          <span class="tag">QUYẾT ĐỊNH</span>
+          <div>
+            <p>Hỏi lại chị Hà — xác nhận tháng đầu MVP chỉ cần trừ weekend,
+            <strong>chưa cần trừ holiday</strong>. Ghi rõ quyết định vào cả entity model
+            lẫn Out&nbsp;of&nbsp;Scope của BR-001, để không lạc mất lần nữa.</p>
+            <p class="who">Chị Hà × Tuấn · 2026&#8209;08&#8209;06</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <figure class="diagram-panel" data-reveal>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1260 300" role="img" aria-label="Cài plugin AIUP, sinh diagram và entity model, review bản nháp phát hiện thiếu xử lý ngày lễ, hai nhánh quan sát hội tụ vào một quyết định no-holiday-MVP.">
+          <!-- A -->
+          <rect x="20" y="120" width="170" height="60" rx="9" fill="none" stroke="currentColor" opacity=".8"></rect>
+          <text x="105" y="145" text-anchor="middle" class="dg-node-sub" opacity=".6">BƯỚC 1</text>
+          <text x="105" y="163" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Cài plugin AIUP</text>
+
+          <line x1="190" y1="150" x2="226" y2="150" stroke="currentColor" stroke-width="1.4" opacity=".7"></line>
+          <polygon points="230,150 220,145.5 220,154.5" fill="currentColor" opacity=".8"></polygon>
+
+          <!-- B -->
+          <rect x="230" y="120" width="190" height="60" rx="9" fill="none" stroke="var(--accent)" stroke-width="1.5"></rect>
+          <text x="325" y="145" text-anchor="middle" class="dg-node-sub" style="fill:var(--accent-strong); opacity:.8">BƯỚC 2 · SKILL</text>
+          <text x="325" y="163" text-anchor="middle" class="dg-node-title" style="font-size:11.5px; fill:var(--accent-strong)">Diagram + Entity model</text>
+
+          <line x1="420" y1="150" x2="456" y2="150" stroke="currentColor" stroke-width="1.4" opacity=".7"></line>
+          <polygon points="460,150 450,145.5 450,154.5" fill="currentColor" opacity=".8"></polygon>
+
+          <!-- C : review -->
+          <rect x="460" y="120" width="170" height="60" rx="9" fill="none" stroke="currentColor" opacity=".8"></rect>
+          <text x="545" y="145" text-anchor="middle" class="dg-node-sub" opacity=".6">BƯỚC 3</text>
+          <text x="545" y="163" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Review bản nháp</text>
+
+          <!-- branch lines -->
+          <path d="M 630 132 C 670 90, 700 70, 730 63" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"></path>
+          <path d="M 630 168 C 670 210, 700 230, 730 237" fill="none" stroke="var(--rust)" stroke-width="1.3" opacity=".85"></path>
+
+          <!-- up note: OK -->
+          <rect x="730" y="38" width="230" height="50" rx="8" fill="none" stroke="currentColor" opacity=".8"></rect>
+          <text x="845" y="58" text-anchor="middle" class="dg-node-sub" opacity=".6">✓ ỔN</text>
+          <text x="845" y="75" text-anchor="middle" class="dg-node-title" style="font-size:11px">Employee, Attendance, LeaveRequest</text>
+
+          <!-- down note: gap -->
+          <rect x="730" y="212" width="230" height="50" rx="8" fill="none" stroke="var(--rust)" stroke-width="1.5"></rect>
+          <text x="845" y="232" text-anchor="middle" class="dg-node-sub" style="fill:var(--rust); opacity:.9">⚠ THIẾU</text>
+          <text x="845" y="249" text-anchor="middle" class="dg-node-title" style="font-size:11px; fill:var(--rust)">Ngày lễ quốc gia chưa xử lý</text>
+
+          <!-- converge to D -->
+          <path d="M 960 63 C 1000 70, 1030 100, 1050 132" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"></path>
+          <path d="M 960 237 C 1000 230, 1030 200, 1050 168" fill="none" stroke="var(--rust)" stroke-width="1.3" opacity=".85"></path>
+
+          <!-- D : decision -->
+          <rect x="1050" y="120" width="180" height="60" rx="9" fill="none" stroke="var(--teal)" stroke-width="1.6"></rect>
+          <text x="1140" y="145" text-anchor="middle" class="dg-node-sub" style="fill:var(--teal); opacity:.85">QUYẾT ĐỊNH</text>
+          <text x="1140" y="163" text-anchor="middle" class="dg-node-title" style="font-size:11px; fill:var(--teal)">Không trừ holiday ở MVP</text>
+        </svg>
+      </div>
+      <figcaption class="diagram-caption">
+        Hai quan sát ở bước Review (ổn / thiếu) đều hội tụ vào một quyết định duy nhất — không rẽ nhánh code, chỉ rẽ nhánh quyết định.
+      </figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3>Tái cấu trúc thư mục</h3>
+        <p>AIUP mặc định ghi vào <code>docs/</code>. Chuyển output sang <code>specs/</code>
+        để đồng bộ với cấu trúc speckit đã có từ Ngày 01.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="mkdir -p specs/entities specs/diagrams
+mv docs/use_cases.puml specs/diagrams/use-cases.puml
+rm -rf docs">COPY</button>
+          </div>
+          <pre><code class="l">mkdir -p specs/entities specs/diagrams</code><code class="l">mv docs/use_cases.puml specs/diagrams/use-cases.puml</code><code class="c"># entity-model.md viết trực tiếp vào specs/entities/</code><code class="l">rm -rf docs</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">5</div>
+      <div>
+        <h3>Commit chốt Ngày 02</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git add specs/
+git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MVP decision&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git add specs/</code><code class="l">git commit -m "feat(BR-001): entity model + use case diagram, no-holiday-MVP decision"</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2.4rem; font-size:1rem;">5 entity, 2 kiểu khác nhau</h3>
+    <div class="entity-grid" data-reveal>
+      <div class="entity-card persisted">
+        <div class="entity-row"><span class="entity-name">Employee</span><span class="kind table">TABLE</span></div>
+        <p>Nhân viên/manager/HR, tự tham chiếu <code>manager_id</code>, có <code>annual_leave_balance</code> mặc định 12 ngày/năm.</p>
+      </div>
+      <div class="entity-card persisted">
+        <div class="entity-row"><span class="entity-name">Attendance</span><span class="kind table">TABLE</span></div>
+        <p>1 record/ngày/nhân viên, nguồn <code>"web"</code> hoặc <code>"manual_by_hr"</code>.</p>
+      </div>
+      <div class="entity-card persisted">
+        <div class="entity-row"><span class="entity-name">LeaveRequest</span><span class="kind table">TABLE</span></div>
+        <p><code>annual/sick/unpaid</code>, số ngày tính theo business day — trừ weekend, không trừ holiday ở MVP.</p>
+      </div>
+      <div class="entity-card persisted">
+        <div class="entity-row"><span class="entity-name">ApprovalLog</span><span class="kind log">LOG</span></div>
+        <p>Lưu mọi thay đổi status của một LeaveRequest — phục vụ traceability cho HR.</p>
+      </div>
+      <div class="entity-card computed">
+        <div class="entity-row"><span class="entity-name">MonthlyReport</span><span class="kind view">VIEW</span></div>
+        <p>Không lưu trữ — tổng hợp <code>work_days</code>, <code>leave_days</code>, <code>late_minutes</code> khi export CSV.</p>
+      </div>
+    </div>
+    <p class="legend">
+      <span class="sw"></span>viền liền = bảng có lưu trữ &nbsp;&nbsp; <span class="sw dash"></span>viền đứt = view tính toán, không lưu
+    </p>
+  </section>
+
+  <!-- ============ STRUCTURE ============ -->
+  <section class="day" id="structure">
+    <div class="day-head">
+      <span class="day-num">KẾT QUẢ</span>
+      <h2>Cấu trúc <code>specs/</code> sau 2 ngày</h2>
+    </div>
+    <p class="day-sub">Một cây thư mục duy nhất, mọi thứ trace ngược được về BR-001.</p>
+
+    <div class="tree" data-reveal>
+<span class="dim">specs/</span>
+├── business-requirements/
+│&nbsp;&nbsp; └── BR-001-hr-tool.md&nbsp;&nbsp;<span class="dim">← nguồn gốc: 90' với chị Hà</span>
+├── use-cases/
+│&nbsp;&nbsp; ├── UC-001-login.md
+│&nbsp;&nbsp; ├── UC-002-attendance-check.md
+│&nbsp;&nbsp; ├── UC-004-request-leave.md
+│&nbsp;&nbsp; ├── UC-005-approve-leave.md
+│&nbsp;&nbsp; └── UC-006-monthly-report.md
+├── entities/
+│&nbsp;&nbsp; └── <span class="new">entity-model.md</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 02</span>
+└── diagrams/
+&nbsp;&nbsp;&nbsp;&nbsp; └── <span class="new">use-cases.puml</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 02</span>
+    </div>
+
+    <table class="commit-table" data-reveal>
+      <thead>
+        <tr><th>Ngày</th><th>Commit</th><th>Message</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="day-pill">NGÀY 01</span></td>
+          <td class="hash">79b83df</td>
+          <td class="msg">feat(BR-001): initial requirement catalog, 5 use cases</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="hash">361b291</td>
+          <td class="msg">chore: add speckit skills and .specify tooling</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="hash">1bd2346</td>
+          <td class="msg">chore: remove unused .specify/.gitignore</td>
+        </tr>
+        <tr>
+          <td><span class="day-pill">NGÀY 02</span></td>
+          <td class="hash">fe78fd1</td>
+          <td class="msg">feat(BR-001): entity model + use case diagram, no-holiday-MVP decision</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <div class="foot-row">
+      <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
+      <p class="foot-note">
+        Ngày 03&#8209;04: viết use case spec chi tiết (main flow, alternative flows,
+        acceptance criteria) — bắt đầu từ UC-004, use case nhiều rule nhất trong MVP.
+      </p>
+    </div>
+  </footer>
+</main>
+
+<script>
+  (function(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var text = btn.getAttribute('data-copy') || '';
+        var done = function(){
+          var original = btn.textContent;
+          btn.textContent = 'COPIED';
+          setTimeout(function(){ btn.textContent = original; }, 1400);
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+        } else {
+          fallbackCopy(text, done);
+        }
+      });
+    });
+    function fallbackCopy(text, cb){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta);
+      cb();
+    }
+
+    if(window.matchMedia && !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      var els = document.querySelectorAll('[data-reveal]');
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(en){
+          if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(function(el){ io.observe(el); });
+    }
+  })();
+</script>
