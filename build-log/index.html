@@ -299,6 +299,7 @@
     <nav class="navlinks">
       <a class="navlink" href="#day01">NGÀY 01</a>
       <a class="navlink" href="#day02">NGÀY 02</a>
+      <a class="navlink" href="#day03">NGÀY 03</a>
       <a class="navlink" href="#structure">CẤU TRÚC</a>
     </nav>
   </div>
@@ -308,17 +309,18 @@
 
   <section class="hero">
     <p class="eyebrow">Spec-Driven Development · HR Tool</p>
-    <h1>Hai ngày, một chuỗi spec<br>truy vết được đầu&#8209;cuối</h1>
+    <h1>Một chuỗi spec truy vết được,<br>từ ý tưởng tới code chạy thật</h1>
     <p class="lede">
-      Từ 90 phút nói chuyện với HR đến entity model chốt bản — mọi quyết định,
-      kể cả một cái bị bỏ sót giữa chừng, đều nằm lại trong git history thay vì
-      trôi mất trong hội thoại.
+      Từ 90 phút nói chuyện với HR đến UC-004 chạy được trên Postgres thật —
+      mọi quyết định, kể cả một cái bị bỏ sót giữa chừng, đều nằm lại trong
+      git history thay vì trôi mất trong hội thoại.
     </p>
     <div class="hero-meta">
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong></span>
-      <span><strong>4</strong> commit</span>
+      <span><strong>5</strong> commit</span>
       <span><strong>5</strong> use case, <strong>5</strong> entity</span>
+      <span><strong>1</strong> use case implement xong (UC-004)</span>
     </div>
   </section>
 
@@ -708,13 +710,188 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
     </p>
   </section>
 
+  <!-- ============ DAY 03 ============ -->
+  <section class="day" id="day03">
+    <div class="day-head">
+      <span class="day-num">NGÀY 03</span>
+      <h2>UC-004 từ spec đến code chạy được</h2>
+    </div>
+    <p class="day-sub">
+      Mục tiêu: chứng minh spec đủ chi tiết để build trực tiếp — đi đúng chuỗi
+      <strong>use-case-spec → /plan → /tasks → /implement</strong>, không nhảy
+      cóc bước nào (lần đầu có nhảy cóc, phải dừng lại làm đúng thứ tự).
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Viết chi tiết UC-004</h3>
+        <p>Từ stub Ngày 01, elaborate thành spec đầy đủ: <code>Trigger</code> →
+        <code>Preconditions</code> → <code>Main Flow</code> (6 bước) →
+        <code>Alternative Flows</code> → 4 <code>Exceptions</code> (E1&#8209;E4,
+        mỗi cái kèm message chính xác) → 5 <code>Acceptance Criteria</code>
+        dạng Given&#8209;When&#8209;Then. Status: <code>draft</code> →
+        <code>approved</code>.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/aiup-core:use-case-spec UC-004">COPY</button>
+          </div>
+          <pre><code class="k">/aiup-core:use-case-spec UC-004</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3><code>/plan</code> — repo chưa có dòng code nào</h3>
+        <p>Plan mode hỏi rõ trước khi giả định, chốt 3 quyết định:</p>
+        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
+          <li><strong>Stack</strong>: NestJS + Next.js App Router (monorepo npm workspaces) — khớp sẵn plugin đồng hành <code>aiup-nestjs-nextjs</code>.</li>
+          <li><strong>Độ chân thực</strong>: demo-level — mock đăng nhập (UC-001 chưa build) và mock gửi email, cả hai đều là seam thay được sau.</li>
+          <li><strong>Persistence</strong>: PostgreSQL qua Drizzle ORM, migration sinh tự động, không hand-write SQL.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3><code>/tasks</code> — 7 task theo layer</h3>
+        <p>Migration → types → API → validation → email stub → UI form → test
+        suite. Bỏ task "migrate approval_logs" (UC-004 không đụng tới, để dành
+        UC-005) và task "update Dashboard" (Dashboard không nằm trong 5 UC đã
+        chốt) — hỏi rõ trước khi bỏ, không tự quyết.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3><code>/implement</code> + adversarial review</h3>
+        <p>Implement xong 7 task, chạy <code>/codex:adversarial-review</code>
+        trước khi commit — verdict <strong>needs-attention</strong>, 3 lỗi:</p>
+        <table class="commit-table" style="margin-top:1rem;">
+          <thead><tr><th>Lỗi</th><th>Sửa</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="msg">Header <code>x-demo-employee-id</code> giả mạo được danh tính bất kỳ nhân viên nào</td>
+              <td class="msg"><code>main.ts</code> từ chối khởi động nếu <code>NODE_ENV=production</code></td>
+            </tr>
+            <tr>
+              <td class="msg">Check-trùng-lịch (E4) và insert tách rời → race condition khi 2 request cùng lúc</td>
+              <td class="msg">Gộp 1 transaction, <code>pg_advisory_xact_lock</code> theo <code>employeeId</code></td>
+            </tr>
+            <tr>
+              <td class="msg">Có <code>schema.ts</code> nhưng chưa có migration thật — deploy mới sẽ lỗi</td>
+              <td class="msg">Chạy <code>drizzle-kit generate</code> thật, đọc SQL trước khi commit</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <figure class="diagram-panel" data-reveal>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1260 200" role="img" aria-label="Chuỗi use-case-spec, /plan, /tasks, /implement, adversarial review phát hiện 3 lỗi, kết thúc bằng 3 lỗi đã sửa và verify pass.">
+          <g font-family="inherit">
+            <rect x="10" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+            <text x="95" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">SPEC</text>
+            <text x="95" y="118" text-anchor="middle" class="dg-node-title" style="font-size:12px">UC-004: E1&#8209;E4 + 5 AC</text>
+
+            <rect x="220" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+            <text x="305" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">/PLAN</text>
+            <text x="305" y="118" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Nest+Next+Drizzle</text>
+
+            <rect x="430" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+            <text x="515" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">/TASKS</text>
+            <text x="515" y="118" text-anchor="middle" class="dg-node-title">7 task</text>
+
+            <rect x="640" y="70" width="170" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"></rect>
+            <text x="725" y="97" text-anchor="middle" class="dg-tag" fill="currentColor" opacity=".55">/IMPLEMENT</text>
+            <text x="725" y="118" text-anchor="middle" class="dg-node-title" style="font-size:11.5px">Monorepo full&#8209;stack</text>
+
+            <rect x="850" y="70" width="170" height="68" rx="10" fill="none" stroke="var(--rust)" stroke-width="1.4"></rect>
+            <text x="935" y="97" text-anchor="middle" class="dg-tag" fill="var(--rust)">REVIEW</text>
+            <text x="935" y="118" text-anchor="middle" class="dg-node-title" style="fill:var(--rust)">3 lỗi, needs&#8209;attention</text>
+
+            <rect x="1060" y="70" width="190" height="68" rx="10" fill="none" stroke="var(--teal)" stroke-width="1.6"></rect>
+            <text x="1155" y="97" text-anchor="middle" class="dg-tag" fill="var(--teal)">FIXED</text>
+            <text x="1155" y="118" text-anchor="middle" class="dg-node-title" style="fill:var(--teal); font-size:11.5px">3/3 sửa, verify pass</text>
+          </g>
+
+          <g stroke="currentColor" stroke-width="1.4" opacity=".7">
+            <line x1="180" y1="104" x2="216" y2="104"></line>
+            <line x1="390" y1="104" x2="426" y2="104"></line>
+            <line x1="600" y1="104" x2="636" y2="104"></line>
+            <line x1="810" y1="104" x2="846" y2="104"></line>
+            <line x1="1020" y1="104" x2="1056" y2="104"></line>
+          </g>
+          <g fill="currentColor" opacity=".8">
+            <polygon points="220,104 210,99.5 210,108.5"></polygon>
+            <polygon points="430,104 420,99.5 420,108.5"></polygon>
+            <polygon points="640,104 630,99.5 630,108.5"></polygon>
+            <polygon points="850,104 840,99.5 840,108.5"></polygon>
+            <polygon points="1060,104 1050,99.5 1050,108.5"></polygon>
+          </g>
+        </svg>
+      </div>
+      <figcaption class="diagram-caption">
+        Đúng thứ tự spec → plan → tasks → implement — lần trước bỏ qua bước tasks, bị dừng lại làm lại cho đúng.
+      </figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="step-mark">5</div>
+      <div>
+        <h3>Verify thật, không chỉ unit test</h3>
+        <p>Chạy Postgres thật qua Docker (đổi cổng 5433 vì máy đã có container
+        khác chiếm 5432), migrate, seed 5 nhân viên demo, rồi gọi
+        <code>curl</code> trực tiếp cho cả 5 AC.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="docker compose up -d
+cd apps/api
+npx drizzle-kit migrate
+npm run db:seed
+npm test">COPY</button>
+          </div>
+          <pre><code class="l">docker compose up -d</code><code class="l">cd apps/api</code><code class="l">npx drizzle-kit migrate</code><code class="l">npm run db:seed</code><code class="l">npm test</code></pre>
+        </div>
+        <p style="margin-top:.8rem;">Kết quả: <strong>5/5 unit test pass</strong>, cả 5 AC đúng 100% qua HTTP thật
+        (status code lẫn message tiếng Việt), DB xác nhận <code>approver_id</code>
+        vẫn <code>NULL</code> và <code>annual_leave_balance</code> không đổi lúc
+        submit — chỉ trừ khi UC-005 duyệt.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">6</div>
+      <div>
+        <h3>Commit chốt Ngày 03</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)"</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ STRUCTURE ============ -->
   <section class="day" id="structure">
     <div class="day-head">
       <span class="day-num">KẾT QUẢ</span>
-      <h2>Cấu trúc <code>specs/</code> sau 2 ngày</h2>
+      <h2>Cấu trúc repo sau 3 ngày</h2>
     </div>
-    <p class="day-sub">Một cây thư mục duy nhất, mọi thứ trace ngược được về BR-001.</p>
+    <p class="day-sub">Từ spec tới code chạy được, mọi thứ trace ngược được về BR-001.</p>
 
     <div class="tree" data-reveal>
 <span class="dim">specs/</span>
@@ -723,13 +900,19 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
 ├── use-cases/
 │&nbsp;&nbsp; ├── UC-001-login.md
 │&nbsp;&nbsp; ├── UC-002-attendance-check.md
-│&nbsp;&nbsp; ├── UC-004-request-leave.md
+│&nbsp;&nbsp; ├── UC-004-request-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 03</span>
 │&nbsp;&nbsp; ├── UC-005-approve-leave.md
 │&nbsp;&nbsp; └── UC-006-monthly-report.md
 ├── entities/
-│&nbsp;&nbsp; └── <span class="new">entity-model.md</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 02</span>
+│&nbsp;&nbsp; └── entity-model.md
 └── diagrams/
-&nbsp;&nbsp;&nbsp;&nbsp; └── <span class="new">use-cases.puml</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 02</span>
+&nbsp;&nbsp;&nbsp;&nbsp; └── use-cases.puml
+
+<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03</span>
+├── <span class="new">api/</span>&nbsp;&nbsp;<span class="dim">NestJS + Drizzle ORM + PostgreSQL</span>
+│&nbsp;&nbsp; └── src/{database,employees,leave-requests,mail,common}/
+└── <span class="new">web/</span>&nbsp;&nbsp;<span class="dim">Next.js App Router</span>
+&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/leave-requests/new/page.tsx
     </div>
 
     <table class="commit-table" data-reveal>
@@ -757,6 +940,11 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
           <td class="hash">fe78fd1</td>
           <td class="msg">feat(BR-001): entity model + use case diagram, no-holiday-MVP decision</td>
         </tr>
+        <tr>
+          <td><span class="day-pill">NGÀY 03</span></td>
+          <td class="hash">e862a31</td>
+          <td class="msg">feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -765,8 +953,8 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
     <div class="foot-row">
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
-        Ngày 03&#8209;04: viết use case spec chi tiết (main flow, alternative flows,
-        acceptance criteria) — bắt đầu từ UC-004, use case nhiều rule nhất trong MVP.
+        Ngày 04&#8209;05: elaborate UC-001 (login) để UC-004 có auth thật, rồi
+        UC-005 (duyệt/từ chối) — cùng entity <code>LeaveRequest</code> vừa xong.
       </p>
     </div>
   </footer>
