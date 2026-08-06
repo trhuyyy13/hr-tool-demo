@@ -33,6 +33,8 @@ tháng của HR từ 16 giờ xuống dưới 2 giờ.
 - Tích hợp lương
 - Đa cấp duyệt
 - Chấm công bằng GPS/camera
+- Trừ ngày lễ quốc gia (holiday) khi tính số ngày nghỉ — MVP chỉ trừ weekend,
+  xem [specs/entities/entity-model.md](../entities/entity-model.md#leaverequest)
 
 ## Related Use Cases
 - UC-001: Đăng nhập bằng tài khoản công ty (Google SSO)
@@ -41,8 +43,16 @@ tháng của HR từ 16 giờ xuống dưới 2 giờ.
 - UC-005: Duyệt/từ chối nghỉ phép (manager)
 - UC-006: Báo cáo tháng (HR)
 
+## Related Artifacts
+- [Entity Model](../entities/entity-model.md)
+- [Use Case Diagram](../diagrams/use-cases.puml)
+
 ## Open Questions
-- [ ] Ngày lễ quốc gia có cần trừ vào tính business day không? (Quyết định: chưa cần ở MVP, xem entity model)
+- [x] Ngày lễ quốc gia có cần trừ vào tính business day không? (Quyết định
+  2026-08-06, Tuấn: KHÔNG trừ ở MVP, chỉ trừ weekend — xem Out of Scope và
+  [entity-model.md](../entities/entity-model.md#leaverequest))
 
 ## History
 - v1 (2026-08-06, Tuấn): initial, chốt sau buổi trao đổi 90 phút với chị Hà
+- v2 (2026-08-06, Tuấn): thêm Entity Model + Use Case Diagram, chốt quyết
+  định không trừ ngày lễ quốc gia ở MVP

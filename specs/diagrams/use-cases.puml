@@ -1,0 +1,33 @@
+@startuml Use Cases Overview
+left to right direction
+
+actor "Employee" as employee
+actor "Manager" as manager
+actor "HR" as hr
+
+rectangle "HR Tool — Chấm công & Nghỉ phép" {
+    usecase "UC-001\nĐăng nhập bằng tài khoản công ty (Google SSO)" as UC001
+    usecase "UC-002\nChấm công vào/ra" as UC002
+    usecase "UC-004\nXin nghỉ phép" as UC004
+    usecase "UC-005\nDuyệt/từ chối nghỉ phép" as UC005
+    usecase "UC-006\nBáo cáo tháng" as UC006
+}
+
+employee --> UC001
+employee --> UC002
+employee --> UC004
+manager --> UC005
+hr --> UC006
+
+UC002 ..> UC001 : <<include>>
+UC004 ..> UC001 : <<include>>
+UC005 ..> UC001 : <<include>>
+UC006 ..> UC001 : <<include>>
+
+note right of UC004
+  Nhiều rule nhất trong scope MVP,
+  sẽ là use case dẫn đường khi viết
+  spec chi tiết (Ngày 3-4).
+end note
+
+@enduml
