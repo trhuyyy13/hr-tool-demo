@@ -753,6 +753,14 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
           <li><strong>Độ chân thực</strong>: demo-level — mock đăng nhập (UC-001 chưa build) và mock gửi email, cả hai đều là seam thay được sau.</li>
           <li><strong>Persistence</strong>: PostgreSQL qua Drizzle ORM, migration sinh tự động, không hand-write SQL.</li>
         </ul>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/plan UC-004">COPY</button>
+          </div>
+          <pre><code class="k">/plan UC-004</code></pre>
+        </div>
       </div>
     </div>
 
@@ -764,6 +772,14 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
         suite. Bỏ task "migrate approval_logs" (UC-004 không đụng tới, để dành
         UC-005) và task "update Dashboard" (Dashboard không nằm trong 5 UC đã
         chốt) — hỏi rõ trước khi bỏ, không tự quyết.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/tasks UC-004">COPY</button>
+          </div>
+          <pre><code class="k">/tasks UC-004</code></pre>
+        </div>
       </div>
     </div>
 
@@ -773,6 +789,15 @@ git commit -m &quot;feat(BR-001): entity model + use case diagram, no-holiday-MV
         <h3><code>/implement</code> + adversarial review</h3>
         <p>Implement xong 7 task, chạy <code>/codex:adversarial-review</code>
         trước khi commit — verdict <strong>needs-attention</strong>, 3 lỗi:</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/implement
+/codex:adversarial-review">COPY</button>
+          </div>
+          <pre><code class="k">/implement</code><code class="k">/codex:adversarial-review</code></pre>
+        </div>
         <table class="commit-table" style="margin-top:1rem;">
           <thead><tr><th>Lỗi</th><th>Sửa</th></tr></thead>
           <tbody>
