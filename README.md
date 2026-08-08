@@ -295,3 +295,23 @@ git push
 Với UC-006, cả **5/5 use case** chốt từ Day 01 (UC-001, UC-002, UC-004,
 UC-005, UC-006) đều đã đi hết vòng spec → implement → verify qua Postgres
 thật.
+
+### Đối chiếu lại với case study gốc — vá 1 gap thật (UC-005 E5)
+
+Đọc lại case study HR tool gốc (cùng BR-001, cùng nhân vật) phát hiện: câu
+chuyện gốc gặp đúng bug này ở ngày kiểm thử cuối — nhân viên không có
+`manager_id` (đứng đầu tổ chức) thì **không ai duyệt được đơn nghỉ phép
+của họ**, và UC-004 cũng lặng lẽ không gửi được email duyệt. Case study
+gốc xử lý bằng rule "không có manager thì HR Director duyệt thay" — repo
+này lúc đó chưa có, nên bổ sung ngay: `HR_DIRECTOR_EMAIL` (mặc định nhân
+viên HR đã seed sẵn) vừa nhận email UC-004 vừa được phép duyệt/từ chối ở
+UC-005 khi Employee không có manager (E5, AC-8 mới).
+
+```bash
+git commit -m "fix(UC-005): HR Director fallback when the requester has no manager (E5)"
+git push
+```
+
+Verify: 37/37 unit test pass, và qua HTTP thật — Minh (không có manager)
+nộp đơn, Hà (HR Director) duyệt được, balance trừ đúng 10→7, người khác
+vẫn bị 403.

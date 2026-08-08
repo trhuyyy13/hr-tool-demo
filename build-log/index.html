@@ -320,7 +320,7 @@
     <div class="hero-meta">
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;08</strong></span>
-      <span><strong>18</strong> commit</span>
+      <span><strong>21</strong> commit</span>
       <span><strong>5</strong> use case, <strong>5</strong> entity</span>
       <span><strong>5/5</strong> use case implement xong</span>
     </div>
@@ -1017,6 +1017,24 @@ git push">COPY</button>
         → verify qua Postgres thật.</p>
       </div>
     </div>
+
+    <div class="step">
+      <div class="step-mark">5</div>
+      <div>
+        <h3>Đối chiếu case study gốc — vá 1 gap thật (UC-005 E5)</h3>
+        <p>Case study HR tool gốc (cùng BR-001, cùng nhân vật) gặp đúng bug
+        này ở ngày kiểm thử cuối: nhân viên không có <code>manager_id</code>
+        (đứng đầu tổ chức) thì <strong>không ai duyệt được đơn nghỉ phép
+        của họ</strong>, và UC-004 cũng lặng lẽ không gửi được email duyệt.
+        Bổ sung <code>HR_DIRECTOR_EMAIL</code> (mặc định nhân viên HR đã
+        seed sẵn) — vừa nhận email UC-004, vừa được phép duyệt/từ chối ở
+        UC-005 khi Employee không có manager (E5, AC-8 mới).</p>
+        <p style="margin-top:.8rem;">Verify: <strong>37/37 unit test
+        pass</strong>, và qua HTTP thật — Minh (không có manager) nộp đơn,
+        Hà (HR Director) duyệt được, balance trừ đúng 10→7, người khác vẫn
+        bị 403.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ STRUCTURE ============ -->
@@ -1099,6 +1117,11 @@ git push">COPY</button>
           <td class="hash">0e91d63</td>
           <td class="msg">feat(UC-006): implement monthly report CSV export end to end</td>
         </tr>
+        <tr>
+          <td></td>
+          <td class="hash">69e0539</td>
+          <td class="msg">fix(UC-005): HR Director fallback when the requester has no manager (E5)</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1108,7 +1131,8 @@ git push">COPY</button>
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
         5/5 use case từ BR-001 (Ngày 01) nay đều chạy được trên Postgres
-        thật — UC-001, UC-002, UC-004, UC-005, UC-006.
+        thật — UC-001, UC-002, UC-004, UC-005, UC-006. Đối chiếu lại với
+        case study gốc đã vá thêm 1 gap thật (UC-005 E5, HR Director).
       </p>
     </div>
   </footer>
