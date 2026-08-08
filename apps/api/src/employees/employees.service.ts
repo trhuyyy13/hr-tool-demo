@@ -11,6 +11,7 @@ export class EmployeesService {
     return rows.map((row) => ({
       id: row.id,
       fullName: row.fullName,
+      email: row.email,
       department: row.department,
       managerId: row.managerId,
       annualLeaveBalance: row.annualLeaveBalance,
