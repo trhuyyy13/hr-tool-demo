@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-type Employee = {
+type SessionEmployee = {
   id: number;
   fullName: string;
+  email: string;
   department: string;
   annualLeaveBalance: number;
 };
@@ -17,11 +19,10 @@ const LEAVE_TYPE_LABEL: Record<LeaveType, string> = {
   unpaid: 'Nghỉ không lương',
 };
 
-const DEMO_EMPLOYEE_STORAGE_KEY = 'demoEmployeeId';
-
 export default function NewLeaveRequestPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const router = useRouter();
+  const [me, setMe] = useState<SessionEmployee | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   const [type, setType] = useState<LeaveType>('annual');
   const [fromDate, setFromDate] = useState('');
@@ -32,26 +33,27 @@ export default function NewLeaveRequestPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // UC-001 E4/AC-6: no valid session -> back to /login instead of showing the form.
   useEffect(() => {
-    fetch('/api/employees')
-      .then((res) => res.json())
-      .then((data: Employee[]) => {
-        setEmployees(data);
-        const stored = Number(localStorage.getItem(DEMO_EMPLOYEE_STORAGE_KEY));
-        const initial = data.find((e) => e.id === stored)?.id ?? data[0]?.id ?? null;
-        setSelectedEmployeeId(initial);
+    fetch('/api/auth/me')
+      .then(async (res) => {
+        if (!res.ok) {
+          router.replace('/login');
+          return;
+        }
+        setMe(await res.json());
+        setCheckingSession(false);
       })
-      .catch(() => setErrorMessage('Không tải được danh sách nhân viên'));
-  }, []);
+      .catch(() => router.replace('/login'));
+  }, [router]);
 
-  function handleSelectEmployee(id: number) {
-    setSelectedEmployeeId(id);
-    localStorage.setItem(DEMO_EMPLOYEE_STORAGE_KEY, String(id));
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/login');
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedEmployeeId) return;
 
     setSubmitting(true);
     setErrorMessage(null);
@@ -60,12 +62,16 @@ export default function NewLeaveRequestPage() {
     try {
       const res = await fetch('/api/leave-requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-demo-employee-id': String(selectedEmployeeId),
-        },
+        headers: { 'Content-Type': 'application/json' },
+        // No x-demo-employee-id anymore — the session cookie set at
+        // /login rides along automatically on this same-origin request.
         body: JSON.stringify({ type, fromDate, toDate, reason }),
       });
+
+      if (res.status === 401) {
+        router.replace('/login');
+        return;
+      }
 
       const body = await res.json();
 
@@ -87,29 +93,27 @@ export default function NewLeaveRequestPage() {
     }
   }
 
-  const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
+  if (checkingSession || !me) {
+    return null;
+  }
 
   return (
     <main style={{ maxWidth: 480, margin: '2rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Xin nghỉ phép</h1>
-
-      <section style={{ marginBottom: '1.5rem', padding: '1rem', background: '#fff', borderRadius: 8 }}>
-        <label htmlFor="employee" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
-          Đăng nhập với tư cách (demo)
-        </label>
-        <select
-          id="employee"
-          value={selectedEmployeeId ?? ''}
-          onChange={(e) => handleSelectEmployee(Number(e.target.value))}
-          style={{ width: '100%', padding: '0.5rem' }}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.4rem', margin: 0 }}>Xin nghỉ phép</h1>
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{ background: 'none', border: 'none', color: '#666', fontSize: '0.8rem', cursor: 'pointer' }}
         >
-          {employees.map((emp) => (
-            <option key={emp.id} value={emp.id}>
-              {emp.fullName} ({emp.department}) — còn {emp.annualLeaveBalance} ngày phép
-            </option>
-          ))}
-        </select>
-      </section>
+          Đăng xuất
+        </button>
+      </div>
+
+      <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '-1rem', marginBottom: '1.2rem' }}>
+        Đăng nhập với tư cách <strong>{me.fullName}</strong> ({me.department}) — còn{' '}
+        {me.annualLeaveBalance} ngày phép.
+      </p>
 
       {success && (
         <div style={{ background: '#e6f4ea', color: '#1e7a34', padding: '0.75rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
@@ -189,17 +193,11 @@ export default function NewLeaveRequestPage() {
 
         <button
           type="submit"
-          disabled={submitting || !selectedEmployeeId}
+          disabled={submitting}
           style={{ padding: '0.6rem', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
         >
           {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
         </button>
-
-        {selectedEmployee && type === 'annual' && (
-          <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>
-            {selectedEmployee.fullName} hiện còn {selectedEmployee.annualLeaveBalance} ngày phép năm.
-          </p>
-        )}
       </form>
     </main>
   );
