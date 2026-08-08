@@ -412,3 +412,73 @@ git add apps/ specs/use-cases/UC-005-approve-leave.md
 git commit -m "feat(UC-005): implement approve/reject leave requests end to end"
 git push
 ```
+
+## Day 07 — UC-006 báo cáo tháng, 5/5 use case xong
+
+Mục tiêu Day 07: implement UC-006, use case cuối cùng trong 5 UC chốt từ
+Day 01 — khép lại toàn bộ vòng SDD (BR → UC → entity model → plan → tasks
+→ implement → verify) cho cả 5.
+
+### 1. Viết chi tiết UC-006 (`/aiup-core:use-case-spec UC-006`)
+
+Từ stub Day 01, elaborate `UC-006-monthly-report.md`: `Trigger` →
+`Preconditions` → `Main Flow` (5 bước) → 2 `Exceptions` (E1&#8209;E2) → 6
+`Acceptance Criteria`. `Status` chuyển `draft` → `approved`.
+
+**Gap phát hiện khi viết Preconditions** (giống kiểu gap "ngày lễ" ở Ngày
+02): actor của UC-006 là "HR", nhưng entity `Employee` chưa có cột `role`
+phân biệt HR/Manager/Employee. Quyết định demo: cho phép bất kỳ Employee
+đã login nào gọi được báo cáo — ghi rõ vào Preconditions thay vì lờ đi,
+để lại việc thêm `role` cho một UC "quản lý vai trò" chưa nằm trong 5 UC
+đã chốt.
+
+### 2. Implement
+
+- `apps/api/src/reports/` — `ReportsModule`, không có bảng mới (entity
+  model đã ghi rõ `MonthlyReport` là **view**, không phải table) — tổng
+  hợp trực tiếp từ `Attendance` + `LeaveRequest` (`status = "approved"`).
+- `work_days` = số ngày có `check_in_at`; `leave_days` = business day của
+  leave đã duyệt, cắt theo tháng; `late_minutes` = tổng phút trễ sau
+  **09:00 giờ Việt Nam** (mốc demo, chưa cấu hình theo phòng ban).
+- Trả CSV qua `Content-Disposition: attachment`, không encode gì đặc biệt
+  ngoài escape dấu phẩy/ngoặc kép chuẩn CSV.
+
+### 3. Verify — unit test + full luồng thật
+
+Vì check-in/leave-request qua HTTP chỉ tạo được dữ liệu ở "hôm nay", để
+test báo cáo cho cả tháng cần seed thêm dữ liệu lịch sử trực tiếp bằng SQL
+(qua `pg` client có sẵn) trước khi gọi API:
+
+```bash
+docker compose up -d
+docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
+  apt-get update -qq && apt-get install -y -qq curl
+  cd /repo && npm ci && cd apps/api
+  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
+  npm test
+  npx drizzle-kit migrate && npm run db:seed
+  node -e "/* insert attendance + leave_request lịch sử qua pg client */"
+  npm run build && node dist/main.js &
+  sleep 2
+  # GET /api/reports/monthly?year=..&month=.. — tháng không hợp lệ, tháng
+  # tương lai, và tháng thật có dữ liệu
+'
+```
+
+Kết quả: **34/34 unit test pass** (toàn bộ 6 suite), và CSV thật khớp
+chính xác — nhân viên có check-in 09:15/08:50 và 1 leave 3 ngày duyệt ra
+đúng `work_days=2, leave_days=3, late_minutes=15`; các nhân viên không có
+hoạt động vẫn xuất hiện với toàn 0 (AC-6); tháng không hợp lệ và tháng
+tương lai đều bị chặn đúng message (AC-4, AC-5).
+
+### 4. Commit + push chốt Day 07
+
+```bash
+git add apps/ specs/use-cases/UC-006-monthly-report.md
+git commit -m "feat(UC-006): implement monthly report CSV export end to end"
+git push
+```
+
+Với UC-006, cả **5/5 use case** chốt từ Day 01 (UC-001, UC-002, UC-004,
+UC-005, UC-006) đều đã đi hết vòng spec → implement → verify qua Postgres
+thật.

@@ -303,6 +303,7 @@
       <a class="navlink" href="#day04">NGÀY 04</a>
       <a class="navlink" href="#day05">NGÀY 05</a>
       <a class="navlink" href="#day06">NGÀY 06</a>
+      <a class="navlink" href="#day07">NGÀY 07</a>
       <a class="navlink" href="#structure">CẤU TRÚC</a>
     </nav>
   </div>
@@ -314,16 +315,17 @@
     <p class="eyebrow">Spec-Driven Development · HR Tool</p>
     <h1>Một chuỗi spec truy vết được,<br>từ ý tưởng tới code chạy thật</h1>
     <p class="lede">
-      Từ 90 phút nói chuyện với HR đến 4/5 use case chạy được trên Postgres
-      thật — mọi quyết định, kể cả một cái bị bỏ sót giữa chừng, đều nằm lại
-      trong git history thay vì trôi mất trong hội thoại.
+      Từ 90 phút nói chuyện với HR đến <strong>5/5 use case</strong> chạy
+      được trên Postgres thật — mọi quyết định, kể cả những gap bị bỏ sót
+      giữa chừng, đều nằm lại trong git history thay vì trôi mất trong hội
+      thoại.
     </p>
     <div class="hero-meta">
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;08</strong></span>
-      <span><strong>13</strong> commit</span>
+      <span><strong>15</strong> commit</span>
       <span><strong>5</strong> use case, <strong>5</strong> entity</span>
-      <span><strong>4</strong> use case implement xong (UC-001, UC-002, UC-004, UC-005)</span>
+      <span><strong>5/5</strong> use case implement xong</span>
     </div>
   </section>
 
@@ -1177,11 +1179,103 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
     </div>
   </section>
 
+  <section class="day" id="day07">
+    <div class="day-head">
+      <span class="day-num">NGÀY 07</span>
+      <h2>UC-006 báo cáo tháng — 5/5 use case xong</h2>
+    </div>
+    <p class="day-sub">
+      Mục tiêu: implement UC-006, use case cuối cùng trong 5 UC chốt từ
+      Ngày 01 — khép lại toàn bộ vòng SDD cho cả 5.
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Viết chi tiết UC-006 — và một gap khác lộ ra</h3>
+        <p>Từ stub Ngày 01, elaborate <code>UC-006-monthly-report.md</code>:
+        <code>Trigger</code> → <code>Preconditions</code> →
+        <code>Main Flow</code> (5 bước) → 2 <code>Exceptions</code>
+        (E1&#8209;E2) → 6 <code>Acceptance Criteria</code>.</p>
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p>Actor của UC-006 là "HR", nhưng entity <code>Employee</code>
+            chưa có cột <code>role</code> phân biệt HR/Manager/Employee —
+            giống kiểu gap "ngày lễ" phát hiện ở Ngày 02.</p>
+          </div>
+        </div>
+        <div class="callout decision">
+          <span class="tag">QUYẾT ĐỊNH</span>
+          <div>
+            <p>Demo scope: cho phép bất kỳ Employee đã login nào gọi được
+            báo cáo, ghi rõ vào Preconditions thay vì lờ đi — thêm
+            <code>role</code> để lại cho một UC "quản lý vai trò" chưa nằm
+            trong 5 UC đã chốt.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3>Implement</h3>
+        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
+          <li><code>apps/api/src/reports/</code> — không có bảng mới
+          (entity model đã ghi rõ <code>MonthlyReport</code> là
+          <strong>view</strong>) — tổng hợp trực tiếp từ
+          <code>Attendance</code> + <code>LeaveRequest</code> approved.</li>
+          <li><code>work_days</code> = số ngày có check-in;
+          <code>leave_days</code> = business day của leave đã duyệt, cắt
+          theo tháng; <code>late_minutes</code> = tổng phút trễ sau
+          <strong>09:00 giờ Việt Nam</strong> (mốc demo).</li>
+          <li>Trả CSV qua <code>Content-Disposition: attachment</code>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3>Verify — unit test + full luồng thật</h3>
+        <p>Check-in/leave-request qua HTTP chỉ tạo được dữ liệu ở "hôm
+        nay" — để test báo cáo cho cả tháng, seed thêm dữ liệu lịch sử
+        trực tiếp bằng SQL (qua <code>pg</code> client có sẵn) trước khi
+        gọi API, cùng cách chạy Docker đã dùng từ Ngày 04.</p>
+        <p style="margin-top:.8rem;">Kết quả: <strong>34/34 unit test
+        pass</strong> (toàn bộ 6 suite), và CSV thật khớp chính xác — nhân
+        viên check-in 09:15/08:50 và 1 leave 3 ngày duyệt ra đúng
+        <code>work_days=2, leave_days=3, late_minutes=15</code>; nhân viên
+        không hoạt động vẫn xuất hiện với toàn 0 (AC-6); tháng không hợp
+        lệ và tháng tương lai đều bị chặn đúng message (AC-4, AC-5).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3>Commit + push chốt Ngày 07</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-006): implement monthly report CSV export end to end&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(UC-006): implement monthly report CSV export end to end"</code></pre>
+        </div>
+        <p style="margin-top:.8rem;">Với UC-006, cả <strong>5/5 use case</strong>
+        chốt từ Ngày 01 đều đã đi hết vòng spec → implement → verify qua
+        Postgres thật.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ STRUCTURE ============ -->
   <section class="day" id="structure">
     <div class="day-head">
       <span class="day-num">KẾT QUẢ</span>
-      <h2>Cấu trúc repo sau 6 ngày</h2>
+      <h2>Cấu trúc repo sau 7 ngày — 5/5 use case hoàn chỉnh</h2>
     </div>
     <p class="day-sub">Từ spec tới code chạy được, mọi thứ trace ngược được về BR-001.</p>
 
@@ -1194,17 +1288,17 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
 │&nbsp;&nbsp; ├── UC-002-attendance-check.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 05</span>
 │&nbsp;&nbsp; ├── UC-004-request-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 03</span>
 │&nbsp;&nbsp; ├── UC-005-approve-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 06</span>
-│&nbsp;&nbsp; └── UC-006-monthly-report.md
+│&nbsp;&nbsp; └── UC-006-monthly-report.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 07</span>
 ├── entities/
 │&nbsp;&nbsp; └── entity-model.md
 └── diagrams/
 &nbsp;&nbsp;&nbsp;&nbsp; └── use-cases.puml
 
-<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03; auth/ mới, Ngày 04; attendance/ mới, Ngày 05</span>
+<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03; auth/ mới, Ngày 04; attendance/ mới, Ngày 05; reports/ mới, Ngày 07</span>
 ├── <span class="new">api/</span>&nbsp;&nbsp;<span class="dim">NestJS + Drizzle ORM + PostgreSQL</span>
-│&nbsp;&nbsp; └── src/{attendance,auth,database,employees,leave-requests,mail,common}/
+│&nbsp;&nbsp; └── src/{attendance,auth,database,employees,leave-requests,mail,reports,common}/
 └── <span class="new">web/</span>&nbsp;&nbsp;<span class="dim">Next.js App Router</span>
-&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/{login,attendance,leave-requests/new,manager/approvals}/page.tsx
+&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/{login,attendance,leave-requests/new,manager/approvals,reports/monthly}/page.tsx
     </div>
 
     <table class="commit-table" data-reveal>
@@ -1252,6 +1346,11 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
           <td class="hash">29673a7</td>
           <td class="msg">feat(UC-005): implement approve/reject leave requests end to end</td>
         </tr>
+        <tr>
+          <td><span class="day-pill">NGÀY 07</span></td>
+          <td class="hash">0e91d63</td>
+          <td class="msg">feat(UC-006): implement monthly report CSV export end to end</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1260,8 +1359,8 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
     <div class="foot-row">
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
-        Còn lại: UC-006 (báo cáo tháng, HR) — use case cuối cùng, theo đúng
-        thứ tự spec → plan → implement → verify như 4 UC trước.
+        5/5 use case từ BR-001 (Ngày 01) nay đều chạy được trên Postgres
+        thật — UC-001, UC-002, UC-004, UC-005, UC-006.
       </p>
     </div>
   </footer>
