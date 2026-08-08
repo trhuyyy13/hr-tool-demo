@@ -301,9 +301,6 @@
       <a class="navlink" href="#day02">NGÀY 02</a>
       <a class="navlink" href="#day03">NGÀY 03</a>
       <a class="navlink" href="#day04">NGÀY 04</a>
-      <a class="navlink" href="#day05">NGÀY 05</a>
-      <a class="navlink" href="#day06">NGÀY 06</a>
-      <a class="navlink" href="#day07">NGÀY 07</a>
       <a class="navlink" href="#structure">CẤU TRÚC</a>
     </nav>
   </div>
@@ -918,355 +915,106 @@ npm test">COPY</button>
   <section class="day" id="day04">
     <div class="day-head">
       <span class="day-num">NGÀY 04</span>
-      <h2>UC-001 và trả nợ demo auth của UC-004</h2>
+      <h2>UC-001, UC-002, UC-005, UC-006 — hoàn thiện 4 use case còn lại</h2>
     </div>
     <p class="day-sub">
-      Mục tiêu: build UC-001 (login) và dùng nó để thay thế header demo
-      <code>x-demo-employee-id</code> mà adversarial review Ngày 03 đã gắn
-      cảnh báo tạm thời.
+      Nối tiếp Ngày 03: làm nốt UC-001 (login, mở khoá auth thật cho
+      UC-004), rồi UC-002 → UC-005 → UC-006 theo đúng owner đã chốt Ngày
+      01. Cả 4 UC đi cùng một nhịp: elaborate spec (draft&#8209;>approved)
+      → implement → verify (unit test + HTTP thật qua Postgres thật trong
+      Docker) → push.
     </p>
 
     <div class="step">
       <div class="step-mark">1</div>
       <div>
-        <h3>Viết chi tiết UC-001</h3>
-        <p>Từ stub Ngày 01, elaborate <code>UC-001-login.md</code> thành spec
-        đầy đủ: <code>Trigger</code> → <code>Preconditions</code> →
-        <code>Main Flow</code> (6 bước) → <code>Alternative Flows</code>
-        (A1 — đã có session hợp lệ) → 4 <code>Exceptions</code> (E1&#8209;E4)
-        → 6 <code>Acceptance Criteria</code> dạng Given&#8209;When&#8209;Then.
-        Status: <code>draft</code> → <code>approved</code>.</p>
-        <div class="cmd">
-          <div class="cmd-head">
-            <span class="cmd-dots"><span></span><span></span><span></span></span>
-            <span class="cmd-label">claude code</span>
-            <button class="copy-btn" type="button" data-copy="/aiup-core:use-case-spec UC-001">COPY</button>
-          </div>
-          <pre><code class="k">/aiup-core:use-case-spec UC-001</code></pre>
-        </div>
+        <h3>UC-001 — Login, đứng vai Google SSO</h3>
+        <p>Elaborate <code>UC-001-login.md</code> đầy đủ (6 AC). Google
+        OAuth thật chưa nối nên bước xác thực Google đứng vai bằng 1 trang
+        "picker" chọn nhân viên demo — seam thay được sau, giống cách
+        UC-004 mock email. Thêm session cookie HMAC&#8209;signed +
+        <code>SessionAuthGuard</code>, và <strong>retrofit UC-004</strong>
+        dùng session này thay cho header <code>x-demo-employee-id</code>
+        mà adversarial review Ngày 03 cảnh báo.</p>
       </div>
     </div>
 
     <div class="step">
       <div class="step-mark">2</div>
       <div>
-        <h3>Implement — session cookie thay cho header giả mạo</h3>
-        <p>Google OAuth thật chưa nối (không có credential), nên bước 2&#8209;4
-        của Main Flow (redirect sang Google, xác thực, Google trả email đã
-        verify) được đứng vai bằng một trang "picker" — chọn 1 trong các
-        nhân viên demo, coi như email đó đã được Google xác thực xong. Seam
-        thay được sau, không lẫn vào business logic — giống cách UC-004 mock
-        email ở Ngày 03.</p>
-        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
-          <li><code>apps/api/src/auth/</code> — <code>AuthModule</code>,
-          <code>AuthController</code> (<code>POST /auth/login</code>,
-          <code>POST /auth/logout</code>, <code>GET /auth/me</code>),
-          session HMAC&#8209;signed 8h TTL, <code>SessionAuthGuard</code> +
-          <code>@CurrentEmployeeId()</code>.</li>
-          <li><strong>Retrofit UC-004</strong>: <code>leave-requests.controller.ts</code>
-          bỏ header <code>x-demo-employee-id</code>, dùng
-          <code>SessionAuthGuard</code> — đúng lỗ hổng adversarial review
-          Ngày 03 cảnh báo, giờ vá thật thay vì chỉ chặn boot production.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">3</div>
-      <div>
-        <h3>Verify — jest treo trên máy, chạy qua Docker</h3>
-        <p><code>npm test</code> (jest + ts-jest ESM) bị treo vô thời hạn
-        trên shell cục bộ — lỗi môi trường macOS/Docker Desktop, không phải
-        lỗi code. Xác nhận bằng cách chạy lại trong container Linux sạch,
-        không đụng <code>node_modules</code> thật trên máy:</p>
+        <h3>Jest treo trên máy — chuyển hẳn sang test qua Docker</h3>
+        <p><code>npm test</code> treo vô thời hạn trên shell cục bộ —
+        thậm chí <code>cp -r node_modules</code> cũng lỗi
+        <code>Resource deadlock avoided</code> (bug virtiofs của Docker
+        Desktop đã biết, không phải lỗi code). Từ đây mọi test trong dự
+        án chạy qua container Linux sạch, không đụng
+        <code>node_modules</code> thật trên máy:</p>
         <div class="cmd">
           <div class="cmd-head">
             <span class="cmd-dots"><span></span><span></span><span></span></span>
             <span class="cmd-label">terminal</span>
             <button class="copy-btn" type="button" data-copy="docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim \
-  bash -c &quot;cd /repo && npm ci && cd apps/api && npm test -- src/auth&quot;">COPY</button>
+  bash -c &quot;cd /repo && npm ci && cd apps/api && npm test&quot;">COPY</button>
           </div>
-          <pre><code class="l">docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim \</code><code class="l">  bash -c "cd /repo && npm ci && cd apps/api && npm test -- src/auth"</code></pre>
+          <pre><code class="l">docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim \</code><code class="l">  bash -c "cd /repo && npm ci && cd apps/api && npm test"</code></pre>
         </div>
-        <p style="margin-top:.8rem;">Kết quả: <strong>3 test suite / 10 test pass</strong>
-        (<code>auth.service</code>, <code>session-auth.guard</code>,
-        <code>session.util</code> — đủ AC-1, AC-2, AC-5, AC-6).</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">4</div>
-      <div>
-        <h3>Commit chốt Ngày 04</h3>
-        <div class="cmd">
-          <div class="cmd-head">
-            <span class="cmd-dots"><span></span><span></span><span></span></span>
-            <span class="cmd-label">terminal</span>
-            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it&quot;">COPY</button>
-          </div>
-          <pre><code class="l">git commit -m "feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it"</code></pre>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="day" id="day05">
-    <div class="day-head">
-      <span class="day-num">NGÀY 05</span>
-      <h2>UC-002 chấm công vào/ra</h2>
-    </div>
-    <p class="day-sub">
-      Mục tiêu: implement UC-002, và lần đầu verify <strong>full luồng
-      thật</strong> qua Postgres thật ngay trong quy trình, không chỉ unit
-      test.
-    </p>
-
-    <div class="step">
-      <div class="step-mark">1</div>
-      <div>
-        <h3>Viết chi tiết UC-002</h3>
-        <p>Từ stub Ngày 01, elaborate <code>UC-002-attendance-check.md</code>:
-        <code>Trigger</code> → <code>Preconditions</code> →
-        <code>Main Flow</code> (5 bước) → <code>Alternative Flows</code>
-        (A1 — chấm công ra) → 3 <code>Exceptions</code> (E1&#8209;E3, giữ
-        nguyên E4 dùng chung với UC-001) → 6 <code>Acceptance Criteria</code>.
-        Status: <code>draft</code> → <code>approved</code>.</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">2</div>
-      <div>
-        <h3>Implement</h3>
-        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
-          <li><code>apps/api/src/attendance/</code> — <code>AttendanceModule</code>,
-          migration <code>attendance</code> table qua <code>drizzle-kit
-          generate</code>, đúng 1 record/nhân viên/ngày (unique index).</li>
-          <li>Check-in/check-out atomic qua <code>pg_advisory_xact_lock</code>
-          theo <code>employeeId</code> — cùng pattern chống race condition
-          mà adversarial review Ngày 03 đã bắt UC-004 sửa.</li>
-          <li><code>apps/web/src/app/attendance/page.tsx</code> — trang chấm
-          công, redirect <code>/login</code> nếu chưa có session.</li>
-        </ul>
+        <p style="margin-top:.8rem;">Kết quả UC-001: <strong>10/10 test
+        pass</strong> (AC-1, AC-2, AC-5, AC-6).</p>
       </div>
     </div>
 
     <div class="step">
       <div class="step-mark">3</div>
       <div>
-        <h3>Verify — unit test + full luồng thật</h3>
-        <p>Chạy trong Docker (né lỗi virtiofs — xem Ngày 04), lần này thêm
-        cả migrate/seed/build/curl thật qua Postgres, không dừng ở unit
-        test:</p>
-        <div class="cmd">
-          <div class="cmd-head">
-            <span class="cmd-dots"><span></span><span></span><span></span></span>
-            <span class="cmd-label">terminal</span>
-            <button class="copy-btn" type="button" data-copy="docker compose up -d
-docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim bash -c '
-  apt-get update -qq && apt-get install -y -qq curl
-  cd /repo && npm ci && cd apps/api
-  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
-  npm test -- src/attendance src/auth src/leave-requests
-  npx drizzle-kit migrate && npm run db:seed && npm run build
-  node dist/main.js &
-  sleep 2
-  # curl từng AC qua /api/auth/login + /api/attendance/*
-'">COPY</button>
-          </div>
-          <pre><code class="l">docker compose up -d</code><code class="l">docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '</code><code class="l">  apt-get update -qq && apt-get install -y -qq curl</code><code class="l">  cd /repo && npm ci && cd apps/api</code><code class="l">  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool</code><code class="l">  npm test -- src/attendance src/auth src/leave-requests</code><code class="l">  npx drizzle-kit migrate && npm run db:seed && npm run build</code><code class="l">  node dist/main.js &</code><code class="l">  sleep 2</code><code class="c">  # curl từng AC qua /api/auth/login + /api/attendance/*</code><code class="l">'</code></pre>
-        </div>
-        <p style="margin-top:.8rem;">Kết quả: <strong>21/21 unit test pass</strong>
-        (attendance + auth + leave-requests), và cả <strong>6 AC đúng 100%
-        qua HTTP thật</strong> — kèm 1 request <code>leave-requests</code>
-        (UC-004) để xác nhận session guard vẫn đúng sau khi thêm module mới
-        (regression check).</p>
+        <h3>UC-002, UC-005, UC-006 — cùng một nhịp, tóm tắt</h3>
+        <p>Từ UC-002 trở đi, mỗi UC thêm bước verify full luồng thật
+        (migrate + seed + build + curl qua Postgres thật, cùng container
+        Docker ở trên) — không chỉ dừng ở unit test.</p>
+        <table class="commit-table" style="margin-top:1rem;">
+          <thead><tr><th>UC</th><th>Việc chính</th><th>Quyết định / gap</th><th>Verify</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="msg"><strong>UC-002</strong><br>chấm công vào/ra</td>
+              <td class="msg"><code>AttendanceModule</code>, 1 record/nhân viên/ngày, check-in/out atomic qua <code>pg_advisory_xact_lock</code></td>
+              <td class="msg">—</td>
+              <td class="msg">21/21 unit test; 6/6 AC qua HTTP thật + regression UC-004</td>
+            </tr>
+            <tr>
+              <td class="msg"><strong>UC-005</strong><br>duyệt/từ chối nghỉ</td>
+              <td class="msg"><code>decide()</code>: đổi status + trừ balance + ghi <code>ApprovalLog</code>, atomic 1 transaction</td>
+              <td class="msg">Quyền duyệt dùng <code>manager_id</code> có sẵn, không thêm cột "role"</td>
+              <td class="msg">28/28 unit test; AC&#8209;1/3/4/5/6 qua HTTP thật (balance Lan 8→5)</td>
+            </tr>
+            <tr>
+              <td class="msg"><strong>UC-006</strong><br>báo cáo tháng</td>
+              <td class="msg"><code>ReportsModule</code> (không bảng mới — view), CSV work_days/leave_days/late_minutes (mốc trễ 09:00 VN)</td>
+              <td class="msg"><code>Employee</code> chưa có cột <code>role</code> → demo mở cho mọi nhân viên đã login</td>
+              <td class="msg">34/34 unit test; CSV thật khớp số liệu</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <div class="step">
       <div class="step-mark">4</div>
       <div>
-        <h3>Commit + push chốt Ngày 05</h3>
+        <h3>Commit + push</h3>
         <div class="cmd">
           <div class="cmd-head">
             <span class="cmd-dots"><span></span><span></span><span></span></span>
             <span class="cmd-label">terminal</span>
-            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-002): implement attendance check-in/check-out end to end&quot;">COPY</button>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it&quot;
+git commit -m &quot;feat(UC-002): implement attendance check-in/check-out end to end&quot;
+git commit -m &quot;feat(UC-005): implement approve/reject leave requests end to end&quot;
+git commit -m &quot;feat(UC-006): implement monthly report CSV export end to end&quot;
+git push">COPY</button>
           </div>
-          <pre><code class="l">git commit -m "feat(UC-002): implement attendance check-in/check-out end to end"</code></pre>
+          <pre><code class="l">git commit -m "feat(UC-001): ..."</code><code class="l">git commit -m "feat(UC-002): ..."</code><code class="l">git commit -m "feat(UC-005): ..."</code><code class="l">git commit -m "feat(UC-006): ..."</code><code class="l">git push</code></pre>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="day" id="day06">
-    <div class="day-head">
-      <span class="day-num">NGÀY 06</span>
-      <h2>UC-005 duyệt/từ chối nghỉ phép</h2>
-    </div>
-    <p class="day-sub">
-      Mục tiêu: khép kín vòng đời <code>LeaveRequest</code> mà UC-004 mở ra
-      (<code>pending</code> → <code>approved</code>/<code>rejected</code>),
-      lần đầu dùng tới entity <code>ApprovalLog</code> (Ngày 02) và quan hệ
-      <code>manager_id</code> tự tham chiếu trên <code>Employee</code>.
-    </p>
-
-    <div class="step">
-      <div class="step-mark">1</div>
-      <div>
-        <h3>Viết chi tiết UC-005</h3>
-        <p>Từ stub Ngày 01, elaborate <code>UC-005-approve-leave.md</code>:
-        <code>Trigger</code> → <code>Preconditions</code> →
-        <code>Main Flow</code> (duyệt, 7 bước) → <code>Alternative
-        Flows</code> (A1 — từ chối) → 4 <code>Exceptions</code>
-        (E1&#8209;E4) → 7 <code>Acceptance Criteria</code>. Status:
-        <code>draft</code> → <code>approved</code>.</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">2</div>
-      <div>
-        <h3>Implement</h3>
-        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
-          <li>Migration <code>approval_log</code> — đúng entity model Ngày
-          02, không cần đổi schema <code>LeaveRequest</code>.</li>
-          <li><code>LeaveRequestsRepository.decide()</code> — approve/reject
-          + trừ balance (nếu annual) + ghi <code>ApprovalLog</code>, tất cả
-          trong 1 transaction với <code>pg_advisory_xact_lock(employeeId)</code>
-          — khoá theo nhân viên để 2 lần duyệt/race trên cùng request hoặc
-          2 approval cùng lúc đụng balance không thể chồng nhau.</li>
-          <li><strong>Authorization</strong>: chỉ <code>manager_id</code>
-          trực tiếp mới được duyệt/từ chối (E1, 403) — dùng quan hệ tự
-          tham chiếu sẵn có trên <code>Employee</code>, không cần thêm cột
-          "role".</li>
-          <li><code>apps/web/src/app/manager/approvals/page.tsx</code> —
-          trang danh sách chờ duyệt, nút Duyệt / Từ chối kèm ô nhập lý do.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">3</div>
-      <div>
-        <h3>Verify — unit test + full luồng thật</h3>
-        <p>Lan nộp đơn → Minh duyệt → balance trừ đúng; Minh từ chối đơn
-        khác kèm lý do; Lan (không phải manager) bị 403 khi tự duyệt; duyệt
-        lại 1 request đã xử lý bị chặn — tất cả qua HTTP thật trên Postgres
-        thật, cùng cách chạy Docker đã dùng từ Ngày 04/05.</p>
-        <p style="margin-top:.8rem;">Kết quả: <strong>28/28 unit test
-        pass</strong> (toàn bộ suite, gồm cả AC-2/AC-7 vốn khó tái hiện qua
-        HTTP vì phụ thuộc thời điểm balance thay đổi), và <strong>AC-1,
-        AC-3, AC-4, AC-5, AC-6 đúng 100% qua HTTP thật</strong> — balance
-        của Lan giảm đúng 8 → 5 sau khi Minh duyệt 3 business day.</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">4</div>
-      <div>
-        <h3>Commit + push chốt Ngày 06</h3>
-        <div class="cmd">
-          <div class="cmd-head">
-            <span class="cmd-dots"><span></span><span></span><span></span></span>
-            <span class="cmd-label">terminal</span>
-            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-005): implement approve/reject leave requests end to end&quot;">COPY</button>
-          </div>
-          <pre><code class="l">git commit -m "feat(UC-005): implement approve/reject leave requests end to end"</code></pre>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="day" id="day07">
-    <div class="day-head">
-      <span class="day-num">NGÀY 07</span>
-      <h2>UC-006 báo cáo tháng — 5/5 use case xong</h2>
-    </div>
-    <p class="day-sub">
-      Mục tiêu: implement UC-006, use case cuối cùng trong 5 UC chốt từ
-      Ngày 01 — khép lại toàn bộ vòng SDD cho cả 5.
-    </p>
-
-    <div class="step">
-      <div class="step-mark">1</div>
-      <div>
-        <h3>Viết chi tiết UC-006 — và một gap khác lộ ra</h3>
-        <p>Từ stub Ngày 01, elaborate <code>UC-006-monthly-report.md</code>:
-        <code>Trigger</code> → <code>Preconditions</code> →
-        <code>Main Flow</code> (5 bước) → 2 <code>Exceptions</code>
-        (E1&#8209;E2) → 6 <code>Acceptance Criteria</code>.</p>
-        <div class="callout gap">
-          <span class="tag">GAP</span>
-          <div>
-            <p>Actor của UC-006 là "HR", nhưng entity <code>Employee</code>
-            chưa có cột <code>role</code> phân biệt HR/Manager/Employee —
-            giống kiểu gap "ngày lễ" phát hiện ở Ngày 02.</p>
-          </div>
-        </div>
-        <div class="callout decision">
-          <span class="tag">QUYẾT ĐỊNH</span>
-          <div>
-            <p>Demo scope: cho phép bất kỳ Employee đã login nào gọi được
-            báo cáo, ghi rõ vào Preconditions thay vì lờ đi — thêm
-            <code>role</code> để lại cho một UC "quản lý vai trò" chưa nằm
-            trong 5 UC đã chốt.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">2</div>
-      <div>
-        <h3>Implement</h3>
-        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
-          <li><code>apps/api/src/reports/</code> — không có bảng mới
-          (entity model đã ghi rõ <code>MonthlyReport</code> là
-          <strong>view</strong>) — tổng hợp trực tiếp từ
-          <code>Attendance</code> + <code>LeaveRequest</code> approved.</li>
-          <li><code>work_days</code> = số ngày có check-in;
-          <code>leave_days</code> = business day của leave đã duyệt, cắt
-          theo tháng; <code>late_minutes</code> = tổng phút trễ sau
-          <strong>09:00 giờ Việt Nam</strong> (mốc demo).</li>
-          <li>Trả CSV qua <code>Content-Disposition: attachment</code>.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">3</div>
-      <div>
-        <h3>Verify — unit test + full luồng thật</h3>
-        <p>Check-in/leave-request qua HTTP chỉ tạo được dữ liệu ở "hôm
-        nay" — để test báo cáo cho cả tháng, seed thêm dữ liệu lịch sử
-        trực tiếp bằng SQL (qua <code>pg</code> client có sẵn) trước khi
-        gọi API, cùng cách chạy Docker đã dùng từ Ngày 04.</p>
-        <p style="margin-top:.8rem;">Kết quả: <strong>34/34 unit test
-        pass</strong> (toàn bộ 6 suite), và CSV thật khớp chính xác — nhân
-        viên check-in 09:15/08:50 và 1 leave 3 ngày duyệt ra đúng
-        <code>work_days=2, leave_days=3, late_minutes=15</code>; nhân viên
-        không hoạt động vẫn xuất hiện với toàn 0 (AC-6); tháng không hợp
-        lệ và tháng tương lai đều bị chặn đúng message (AC-4, AC-5).</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-mark">4</div>
-      <div>
-        <h3>Commit + push chốt Ngày 07</h3>
-        <div class="cmd">
-          <div class="cmd-head">
-            <span class="cmd-dots"><span></span><span></span><span></span></span>
-            <span class="cmd-label">terminal</span>
-            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-006): implement monthly report CSV export end to end&quot;">COPY</button>
-          </div>
-          <pre><code class="l">git commit -m "feat(UC-006): implement monthly report CSV export end to end"</code></pre>
-        </div>
-        <p style="margin-top:.8rem;">Với UC-006, cả <strong>5/5 use case</strong>
-        chốt từ Ngày 01 đều đã đi hết vòng spec → implement → verify qua
-        Postgres thật.</p>
+        <p style="margin-top:.8rem;">Với UC-006, cả <strong>5/5 use
+        case</strong> chốt từ Ngày 01 đều đã đi hết vòng spec → implement
+        → verify qua Postgres thật.</p>
       </div>
     </div>
   </section>
@@ -1275,7 +1023,7 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
   <section class="day" id="structure">
     <div class="day-head">
       <span class="day-num">KẾT QUẢ</span>
-      <h2>Cấu trúc repo sau 7 ngày — 5/5 use case hoàn chỉnh</h2>
+      <h2>Cấu trúc repo sau 4 ngày — 5/5 use case hoàn chỉnh</h2>
     </div>
     <p class="day-sub">Từ spec tới code chạy được, mọi thứ trace ngược được về BR-001.</p>
 
@@ -1285,16 +1033,16 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
 │&nbsp;&nbsp; └── BR-001-hr-tool.md&nbsp;&nbsp;<span class="dim">← nguồn gốc: 90' với chị Hà</span>
 ├── use-cases/
 │&nbsp;&nbsp; ├── UC-001-login.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
-│&nbsp;&nbsp; ├── UC-002-attendance-check.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 05</span>
+│&nbsp;&nbsp; ├── UC-002-attendance-check.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
 │&nbsp;&nbsp; ├── UC-004-request-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 03</span>
-│&nbsp;&nbsp; ├── UC-005-approve-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 06</span>
-│&nbsp;&nbsp; └── UC-006-monthly-report.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 07</span>
+│&nbsp;&nbsp; ├── UC-005-approve-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
+│&nbsp;&nbsp; └── UC-006-monthly-report.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
 ├── entities/
 │&nbsp;&nbsp; └── entity-model.md
 └── diagrams/
 &nbsp;&nbsp;&nbsp;&nbsp; └── use-cases.puml
 
-<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03; auth/ mới, Ngày 04; attendance/ mới, Ngày 05; reports/ mới, Ngày 07</span>
+<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03; auth/attendance/reports mới, Ngày 04</span>
 ├── <span class="new">api/</span>&nbsp;&nbsp;<span class="dim">NestJS + Drizzle ORM + PostgreSQL</span>
 │&nbsp;&nbsp; └── src/{attendance,auth,database,employees,leave-requests,mail,reports,common}/
 └── <span class="new">web/</span>&nbsp;&nbsp;<span class="dim">Next.js App Router</span>
@@ -1337,17 +1085,17 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
           <td class="msg">feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it</td>
         </tr>
         <tr>
-          <td><span class="day-pill">NGÀY 05</span></td>
+          <td></td>
           <td class="hash">4215698</td>
           <td class="msg">feat(UC-002): implement attendance check-in/check-out end to end</td>
         </tr>
         <tr>
-          <td><span class="day-pill">NGÀY 06</span></td>
+          <td></td>
           <td class="hash">29673a7</td>
           <td class="msg">feat(UC-005): implement approve/reject leave requests end to end</td>
         </tr>
         <tr>
-          <td><span class="day-pill">NGÀY 07</span></td>
+          <td></td>
           <td class="hash">0e91d63</td>
           <td class="msg">feat(UC-006): implement monthly report CSV export end to end</td>
         </tr>

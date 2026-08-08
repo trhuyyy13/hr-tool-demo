@@ -238,243 +238,56 @@ git add apps/ docker-compose.yml package.json package-lock.json specs/use-cases/
 git commit -m "feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)"
 ```
 
-## Day 04 — UC-001 và trả nợ demo auth của UC-004
+## Day 04 — UC-001, UC-002, UC-005, UC-006: hoàn thiện 4 use case còn lại
 
-Mục tiêu Day 04: build UC-001 (login) và dùng nó để thay thế header demo
-`x-demo-employee-id` mà adversarial review Day 03 đã gắn cảnh báo tạm thời.
+Mục tiêu Day 04: nối tiếp Day 03, làm nốt 4 UC còn lại — UC-001 (login,
+mở khoá auth thật cho UC-004), rồi UC-002 → UC-005 → UC-006 theo đúng
+owner đã chốt Day 01. Cả 4 UC đi cùng một nhịp: elaborate spec (draft →
+approved) → implement → verify (unit test + HTTP thật qua Postgres thật
+trong Docker) → commit → push.
 
-### 1. Viết chi tiết UC-001 (`/aiup-core:use-case-spec UC-001`)
+### UC-001 — Login, đứng vai Google SSO
 
-Từ stub Day 01, elaborate `UC-001-login.md` thành spec đầy đủ: `Trigger` →
-`Preconditions` → `Main Flow` (6 bước) → `Alternative Flows` (A1 — đã có
-session hợp lệ) → 4 `Exceptions` (E1-E4) → 6 `Acceptance Criteria` dạng
-Given-When-Then (AC-1..AC-6). `Status` chuyển `draft` → `approved`.
+Elaborate `UC-001-login.md` đầy đủ (Trigger/Main Flow/Alt Flow/4
+Exceptions/6 AC). Google OAuth thật chưa nối, nên bước xác thực Google
+được đứng vai bằng một trang "picker" chọn nhân viên demo — seam thay
+được sau, không lẫn business logic (giống cách UC-004 mock email).
+`apps/api/src/auth/` thêm session cookie HMAC-signed +
+`SessionAuthGuard`; **retrofit UC-004** để `leave-requests` dùng session
+này thay vì header `x-demo-employee-id` mà adversarial review Day 03 gắn
+cảnh báo.
 
-### 2. Implement — session cookie thay cho header giả mạo
-
-Độ chân thực giữ nguyên tinh thần demo của UC-004: Google OAuth thật chưa
-nối (không có credential), nên bước 2-4 của Main Flow (redirect sang Google,
-xác thực, Google trả email đã verify) được đứng vai bằng một trang
-"picker" — chọn 1 trong các nhân viên demo, coi như email đó đã được
-Google xác thực xong. Đây là seam thay được sau, không lẫn vào business
-logic (giống cách UC-004 mock email).
-
-- `apps/api/src/auth/` — `AuthModule`, `AuthController`
-  (`POST /auth/login`, `POST /auth/logout`, `GET /auth/me`), `AuthService`,
-  session HMAC-signed (`session.util.ts`, TTL 8h), `SessionAuthGuard` +
-  `@CurrentEmployeeId()` decorator.
-- `apps/web/src/app/login/page.tsx` — trang picker, tự gọi `GET /auth/me`
-  lúc mount để bỏ qua picker nếu đã có session hợp lệ (AC-5).
-- **Retrofit UC-004**: `leave-requests.controller.ts` bỏ header
-  `x-demo-employee-id`, dùng `@UseGuards(SessionAuthGuard)` +
-  `@CurrentEmployeeId()` — đúng lỗ hổng adversarial review Day 03 đã cảnh
-  báo, giờ vá bằng UC-001 thay vì chỉ chặn boot production.
-- `main.ts`: thêm `cookie-parser`, bật `credentials: true` cho CORS; vẫn
-  giữ nguyên chặn khởi động khi `NODE_ENV=production` — login vẫn là
-  picker giả, chưa phải Google OAuth thật.
-
-### 3. Verify — jest treo trên máy, chạy qua Docker
-
-`npm test` (jest + ts-jest ESM) bị treo vô thời hạn trên shell cục bộ (một
-lỗi môi trường macOS/Docker Desktop, không phải lỗi code — xác nhận bằng
-cách chạy lại full trong container Linux sạch, không đụng `node_modules`
-thật trên máy):
+`npm test` bị **treo vô thời hạn** trên shell cục bộ (lỗi môi trường
+macOS/Docker Desktop — `cp -r node_modules` cũng bị `Resource deadlock
+avoided`, một bug virtiofs đã biết, không phải lỗi code). Từ đây, mọi
+test trong dự án chạy qua container Linux sạch, không đụng `node_modules`
+thật trên máy:
 
 ```bash
 docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim \
-  bash -c "cd /repo && npm ci && cd apps/api && npm test -- src/auth"
+  bash -c "cd /repo && npm ci && cd apps/api && npm test"
 ```
 
-Kết quả: **3 test suite / 10 test pass** (`auth.service`,
-`session-auth.guard`, `session.util` — đủ AC-1, AC-2, AC-5, AC-6).
+Kết quả UC-001: 10/10 test pass (AC-1, AC-2, AC-5, AC-6).
 
-### 4. Commit chốt Day 04
+### UC-002, UC-005, UC-006 — cùng một nhịp, tóm tắt
+
+Từ UC-002 trở đi, mỗi UC thêm bước verify **full luồng thật** (migrate +
+seed + build + curl qua Postgres thật trong cùng container Docker ở
+trên), không chỉ dừng ở unit test:
+
+| UC | Việc chính | Quyết định/gap đáng chú ý | Verify |
+|---|---|---|---|
+| **UC-002** chấm công vào/ra | `AttendanceModule`, 1 record/nhân viên/ngày (unique index), check-in/out atomic qua `pg_advisory_xact_lock` | — | 21/21 unit test; 6/6 AC đúng qua HTTP thật, gồm regression check UC-004 |
+| **UC-005** duyệt/từ chối nghỉ | `LeaveRequestsRepository.decide()`: đổi status + trừ balance (nếu annual) + ghi `ApprovalLog`, atomic trong 1 transaction | Quyền duyệt dùng `manager_id` tự tham chiếu có sẵn trên `Employee`, không thêm cột "role" | 28/28 unit test; AC-1/3/4/5/6 đúng qua HTTP thật (balance Lan 8→5) |
+| **UC-006** báo cáo tháng | `ReportsModule` (không bảng mới — `MonthlyReport` là view), tổng hợp `work_days`/`leave_days`/`late_minutes` (mốc trễ 09:00 VN), xuất CSV | `Employee` chưa có cột `role` phân biệt HR → demo mở cho mọi nhân viên đã login, ghi rõ trong Preconditions | 34/34 unit test; CSV thật khớp số liệu (`work_days=2, leave_days=3, late_minutes=15`) |
+
+### Commit + push
 
 ```bash
-git add apps/ specs/use-cases/UC-001-login.md
 git commit -m "feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it"
-git push
-```
-
-## Day 05 — UC-002 chấm công vào/ra
-
-Mục tiêu Day 05: implement UC-002, và lần đầu verify **full luồng thật**
-(không chỉ unit test) qua Postgres thật ngay trong quy trình, thay vì để
-riêng một bước sau.
-
-### 1. Viết chi tiết UC-002 (`/aiup-core:use-case-spec UC-002`)
-
-Từ stub Day 01, elaborate `UC-002-attendance-check.md`: `Trigger` →
-`Preconditions` → `Main Flow` (5 bước) → `Alternative Flows` (A1 — chấm
-công ra) → 3 `Exceptions` (E1-E3, giữ nguyên E4 dùng chung với UC-001) → 6
-`Acceptance Criteria`. `Status` chuyển `draft` → `approved`.
-
-### 2. Implement
-
-- `apps/api/src/attendance/` — `AttendanceModule`, migration
-  `attendance` table (drizzle-kit generate, đúng 1 record/nhân
-  viên/ngày qua unique index), guard bằng `SessionAuthGuard` có sẵn từ
-  UC-001.
-- Check-in/check-out atomic qua `pg_advisory_xact_lock` theo
-  `employeeId` — cùng pattern chống race condition mà adversarial review
-  Ngày 03 đã bắt UC-004 sửa.
-- `apps/web/src/app/attendance/page.tsx` — trang chấm công, tự gọi
-  `GET /auth/me` để redirect `/login` nếu chưa đăng nhập.
-
-### 3. Verify — unit test + full luồng thật
-
-Chạy trong Docker (né lỗi virtiofs — xem Ngày 04), lần này thêm cả
-migrate/seed/build/curl thật qua Postgres, không dừng ở unit test:
-
-```bash
-docker compose up -d
-docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
-  apt-get update -qq && apt-get install -y -qq curl >/dev/null
-  cd /repo && npm ci && cd apps/api
-  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
-  npm test -- src/attendance src/auth src/leave-requests
-  npx drizzle-kit migrate && npm run db:seed && npm run build
-  node dist/main.js &
-  sleep 2
-  # ... curl từng AC qua /api/auth/login + /api/attendance/*
-'
-```
-
-Kết quả: **21/21 unit test pass** (attendance + auth + leave-requests), và
-cả 6 AC đúng 100% qua HTTP thật — bao gồm cả một request `leave-requests`
-(UC-004) để xác nhận session guard vẫn hoạt động đúng sau khi thêm module
-mới (regression check).
-
-### 4. Commit + push chốt Day 05
-
-```bash
-git add apps/ specs/use-cases/UC-002-attendance-check.md
 git commit -m "feat(UC-002): implement attendance check-in/check-out end to end"
-git push
-```
-
-## Day 06 — UC-005 duyệt/từ chối nghỉ phép
-
-Mục tiêu Day 06: implement UC-005 — bước cuối khép kín vòng đời
-`LeaveRequest` mà UC-004 mở ra (`pending` → `approved`/`rejected`), lần đầu
-dùng tới entity `ApprovalLog` (Ngày 02) và quan hệ `manager_id` tự tham
-chiếu trên `Employee`.
-
-### 1. Viết chi tiết UC-005 (`/aiup-core:use-case-spec UC-005`)
-
-Từ stub Day 01, elaborate `UC-005-approve-leave.md`: `Trigger` →
-`Preconditions` → `Main Flow` (duyệt, 7 bước) → `Alternative Flows` (A1 —
-từ chối) → 4 `Exceptions` (E1&#8209;E4) → 7 `Acceptance Criteria`. `Status`
-chuyển `draft` → `approved`.
-
-### 2. Implement
-
-- Migration `approval_log` (drizzle-kit generate) — đúng entity model
-  Ngày 02, không cần đổi schema `LeaveRequest`.
-- `LeaveRequestsRepository.decide()` — approve/reject + trừ balance (nếu
-  annual) + ghi `ApprovalLog`, tất cả trong **1 transaction** với
-  `pg_advisory_xact_lock(employeeId)`: khoá theo nhân viên để 2 lần
-  duyệt/race trên cùng request hoặc 2 approval cùng lúc đụng balance
-  không thể chồng nhau.
-- Authorization: chỉ `manager_id` trực tiếp của nhân viên gửi yêu cầu mới
-  được duyệt/từ chối (E1, 403) — check bằng quan hệ tự tham chiếu sẵn có
-  trên `Employee`, không cần thêm cột "role".
-- `apps/web/src/app/manager/approvals/page.tsx` — trang danh sách chờ
-  duyệt của Manager, nút Duyệt / Từ chối (kèm ô nhập lý do).
-
-### 3. Verify — unit test + full luồng thật
-
-```bash
-docker compose up -d
-docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
-  apt-get update -qq && apt-get install -y -qq curl
-  cd /repo && npm ci && cd apps/api
-  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
-  npm test
-  npx drizzle-kit migrate && npm run db:seed && npm run build
-  node dist/main.js &
-  sleep 2
-  # Lan nộp đơn -> Minh duyệt -> balance trừ đúng; Minh từ chối đơn khác
-  # kèm lý do; Lan (không phải manager) bị 403 khi tự duyệt; duyệt lại 1
-  # request đã xử lý bị chặn — qua /api/auth/login + /api/leave-requests/*
-'
-```
-
-Kết quả: **28/28 unit test pass** (toàn bộ suite, gồm cả AC-2/AC-7 vốn
-khó tái hiện qua HTTP vì phụ thuộc thời điểm balance thay đổi), và
-**AC-1, AC-3, AC-4, AC-5, AC-6 đúng 100% qua HTTP thật** — balance của
-Lan giảm đúng 8 → 5 sau khi Minh duyệt 3 business day.
-
-### 4. Commit + push chốt Day 06
-
-```bash
-git add apps/ specs/use-cases/UC-005-approve-leave.md
 git commit -m "feat(UC-005): implement approve/reject leave requests end to end"
-git push
-```
-
-## Day 07 — UC-006 báo cáo tháng, 5/5 use case xong
-
-Mục tiêu Day 07: implement UC-006, use case cuối cùng trong 5 UC chốt từ
-Day 01 — khép lại toàn bộ vòng SDD (BR → UC → entity model → plan → tasks
-→ implement → verify) cho cả 5.
-
-### 1. Viết chi tiết UC-006 (`/aiup-core:use-case-spec UC-006`)
-
-Từ stub Day 01, elaborate `UC-006-monthly-report.md`: `Trigger` →
-`Preconditions` → `Main Flow` (5 bước) → 2 `Exceptions` (E1&#8209;E2) → 6
-`Acceptance Criteria`. `Status` chuyển `draft` → `approved`.
-
-**Gap phát hiện khi viết Preconditions** (giống kiểu gap "ngày lễ" ở Ngày
-02): actor của UC-006 là "HR", nhưng entity `Employee` chưa có cột `role`
-phân biệt HR/Manager/Employee. Quyết định demo: cho phép bất kỳ Employee
-đã login nào gọi được báo cáo — ghi rõ vào Preconditions thay vì lờ đi,
-để lại việc thêm `role` cho một UC "quản lý vai trò" chưa nằm trong 5 UC
-đã chốt.
-
-### 2. Implement
-
-- `apps/api/src/reports/` — `ReportsModule`, không có bảng mới (entity
-  model đã ghi rõ `MonthlyReport` là **view**, không phải table) — tổng
-  hợp trực tiếp từ `Attendance` + `LeaveRequest` (`status = "approved"`).
-- `work_days` = số ngày có `check_in_at`; `leave_days` = business day của
-  leave đã duyệt, cắt theo tháng; `late_minutes` = tổng phút trễ sau
-  **09:00 giờ Việt Nam** (mốc demo, chưa cấu hình theo phòng ban).
-- Trả CSV qua `Content-Disposition: attachment`, không encode gì đặc biệt
-  ngoài escape dấu phẩy/ngoặc kép chuẩn CSV.
-
-### 3. Verify — unit test + full luồng thật
-
-Vì check-in/leave-request qua HTTP chỉ tạo được dữ liệu ở "hôm nay", để
-test báo cáo cho cả tháng cần seed thêm dữ liệu lịch sử trực tiếp bằng SQL
-(qua `pg` client có sẵn) trước khi gọi API:
-
-```bash
-docker compose up -d
-docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
-  apt-get update -qq && apt-get install -y -qq curl
-  cd /repo && npm ci && cd apps/api
-  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
-  npm test
-  npx drizzle-kit migrate && npm run db:seed
-  node -e "/* insert attendance + leave_request lịch sử qua pg client */"
-  npm run build && node dist/main.js &
-  sleep 2
-  # GET /api/reports/monthly?year=..&month=.. — tháng không hợp lệ, tháng
-  # tương lai, và tháng thật có dữ liệu
-'
-```
-
-Kết quả: **34/34 unit test pass** (toàn bộ 6 suite), và CSV thật khớp
-chính xác — nhân viên có check-in 09:15/08:50 và 1 leave 3 ngày duyệt ra
-đúng `work_days=2, leave_days=3, late_minutes=15`; các nhân viên không có
-hoạt động vẫn xuất hiện với toàn 0 (AC-6); tháng không hợp lệ và tháng
-tương lai đều bị chặn đúng message (AC-4, AC-5).
-
-### 4. Commit + push chốt Day 07
-
-```bash
-git add apps/ specs/use-cases/UC-006-monthly-report.md
 git commit -m "feat(UC-006): implement monthly report CSV export end to end"
 git push
 ```
