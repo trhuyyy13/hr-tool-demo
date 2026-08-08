@@ -352,3 +352,63 @@ git add apps/ specs/use-cases/UC-002-attendance-check.md
 git commit -m "feat(UC-002): implement attendance check-in/check-out end to end"
 git push
 ```
+
+## Day 06 — UC-005 duyệt/từ chối nghỉ phép
+
+Mục tiêu Day 06: implement UC-005 — bước cuối khép kín vòng đời
+`LeaveRequest` mà UC-004 mở ra (`pending` → `approved`/`rejected`), lần đầu
+dùng tới entity `ApprovalLog` (Ngày 02) và quan hệ `manager_id` tự tham
+chiếu trên `Employee`.
+
+### 1. Viết chi tiết UC-005 (`/aiup-core:use-case-spec UC-005`)
+
+Từ stub Day 01, elaborate `UC-005-approve-leave.md`: `Trigger` →
+`Preconditions` → `Main Flow` (duyệt, 7 bước) → `Alternative Flows` (A1 —
+từ chối) → 4 `Exceptions` (E1&#8209;E4) → 7 `Acceptance Criteria`. `Status`
+chuyển `draft` → `approved`.
+
+### 2. Implement
+
+- Migration `approval_log` (drizzle-kit generate) — đúng entity model
+  Ngày 02, không cần đổi schema `LeaveRequest`.
+- `LeaveRequestsRepository.decide()` — approve/reject + trừ balance (nếu
+  annual) + ghi `ApprovalLog`, tất cả trong **1 transaction** với
+  `pg_advisory_xact_lock(employeeId)`: khoá theo nhân viên để 2 lần
+  duyệt/race trên cùng request hoặc 2 approval cùng lúc đụng balance
+  không thể chồng nhau.
+- Authorization: chỉ `manager_id` trực tiếp của nhân viên gửi yêu cầu mới
+  được duyệt/từ chối (E1, 403) — check bằng quan hệ tự tham chiếu sẵn có
+  trên `Employee`, không cần thêm cột "role".
+- `apps/web/src/app/manager/approvals/page.tsx` — trang danh sách chờ
+  duyệt của Manager, nút Duyệt / Từ chối (kèm ô nhập lý do).
+
+### 3. Verify — unit test + full luồng thật
+
+```bash
+docker compose up -d
+docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
+  apt-get update -qq && apt-get install -y -qq curl
+  cd /repo && npm ci && cd apps/api
+  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
+  npm test
+  npx drizzle-kit migrate && npm run db:seed && npm run build
+  node dist/main.js &
+  sleep 2
+  # Lan nộp đơn -> Minh duyệt -> balance trừ đúng; Minh từ chối đơn khác
+  # kèm lý do; Lan (không phải manager) bị 403 khi tự duyệt; duyệt lại 1
+  # request đã xử lý bị chặn — qua /api/auth/login + /api/leave-requests/*
+'
+```
+
+Kết quả: **28/28 unit test pass** (toàn bộ suite, gồm cả AC-2/AC-7 vốn
+khó tái hiện qua HTTP vì phụ thuộc thời điểm balance thay đổi), và
+**AC-1, AC-3, AC-4, AC-5, AC-6 đúng 100% qua HTTP thật** — balance của
+Lan giảm đúng 8 → 5 sau khi Minh duyệt 3 business day.
+
+### 4. Commit + push chốt Day 06
+
+```bash
+git add apps/ specs/use-cases/UC-005-approve-leave.md
+git commit -m "feat(UC-005): implement approve/reject leave requests end to end"
+git push
+```

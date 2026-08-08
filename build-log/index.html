@@ -302,6 +302,7 @@
       <a class="navlink" href="#day03">NGÀY 03</a>
       <a class="navlink" href="#day04">NGÀY 04</a>
       <a class="navlink" href="#day05">NGÀY 05</a>
+      <a class="navlink" href="#day06">NGÀY 06</a>
       <a class="navlink" href="#structure">CẤU TRÚC</a>
     </nav>
   </div>
@@ -313,16 +314,16 @@
     <p class="eyebrow">Spec-Driven Development · HR Tool</p>
     <h1>Một chuỗi spec truy vết được,<br>từ ý tưởng tới code chạy thật</h1>
     <p class="lede">
-      Từ 90 phút nói chuyện với HR đến 3/5 use case chạy được trên Postgres
+      Từ 90 phút nói chuyện với HR đến 4/5 use case chạy được trên Postgres
       thật — mọi quyết định, kể cả một cái bị bỏ sót giữa chừng, đều nằm lại
       trong git history thay vì trôi mất trong hội thoại.
     </p>
     <div class="hero-meta">
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;08</strong></span>
-      <span><strong>11</strong> commit</span>
+      <span><strong>13</strong> commit</span>
       <span><strong>5</strong> use case, <strong>5</strong> entity</span>
-      <span><strong>3</strong> use case implement xong (UC-001, UC-002, UC-004)</span>
+      <span><strong>4</strong> use case implement xong (UC-001, UC-002, UC-004, UC-005)</span>
     </div>
   </section>
 
@@ -1097,11 +1098,90 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
     </div>
   </section>
 
+  <section class="day" id="day06">
+    <div class="day-head">
+      <span class="day-num">NGÀY 06</span>
+      <h2>UC-005 duyệt/từ chối nghỉ phép</h2>
+    </div>
+    <p class="day-sub">
+      Mục tiêu: khép kín vòng đời <code>LeaveRequest</code> mà UC-004 mở ra
+      (<code>pending</code> → <code>approved</code>/<code>rejected</code>),
+      lần đầu dùng tới entity <code>ApprovalLog</code> (Ngày 02) và quan hệ
+      <code>manager_id</code> tự tham chiếu trên <code>Employee</code>.
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Viết chi tiết UC-005</h3>
+        <p>Từ stub Ngày 01, elaborate <code>UC-005-approve-leave.md</code>:
+        <code>Trigger</code> → <code>Preconditions</code> →
+        <code>Main Flow</code> (duyệt, 7 bước) → <code>Alternative
+        Flows</code> (A1 — từ chối) → 4 <code>Exceptions</code>
+        (E1&#8209;E4) → 7 <code>Acceptance Criteria</code>. Status:
+        <code>draft</code> → <code>approved</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3>Implement</h3>
+        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
+          <li>Migration <code>approval_log</code> — đúng entity model Ngày
+          02, không cần đổi schema <code>LeaveRequest</code>.</li>
+          <li><code>LeaveRequestsRepository.decide()</code> — approve/reject
+          + trừ balance (nếu annual) + ghi <code>ApprovalLog</code>, tất cả
+          trong 1 transaction với <code>pg_advisory_xact_lock(employeeId)</code>
+          — khoá theo nhân viên để 2 lần duyệt/race trên cùng request hoặc
+          2 approval cùng lúc đụng balance không thể chồng nhau.</li>
+          <li><strong>Authorization</strong>: chỉ <code>manager_id</code>
+          trực tiếp mới được duyệt/từ chối (E1, 403) — dùng quan hệ tự
+          tham chiếu sẵn có trên <code>Employee</code>, không cần thêm cột
+          "role".</li>
+          <li><code>apps/web/src/app/manager/approvals/page.tsx</code> —
+          trang danh sách chờ duyệt, nút Duyệt / Từ chối kèm ô nhập lý do.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3>Verify — unit test + full luồng thật</h3>
+        <p>Lan nộp đơn → Minh duyệt → balance trừ đúng; Minh từ chối đơn
+        khác kèm lý do; Lan (không phải manager) bị 403 khi tự duyệt; duyệt
+        lại 1 request đã xử lý bị chặn — tất cả qua HTTP thật trên Postgres
+        thật, cùng cách chạy Docker đã dùng từ Ngày 04/05.</p>
+        <p style="margin-top:.8rem;">Kết quả: <strong>28/28 unit test
+        pass</strong> (toàn bộ suite, gồm cả AC-2/AC-7 vốn khó tái hiện qua
+        HTTP vì phụ thuộc thời điểm balance thay đổi), và <strong>AC-1,
+        AC-3, AC-4, AC-5, AC-6 đúng 100% qua HTTP thật</strong> — balance
+        của Lan giảm đúng 8 → 5 sau khi Minh duyệt 3 business day.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3>Commit + push chốt Ngày 06</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-005): implement approve/reject leave requests end to end&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(UC-005): implement approve/reject leave requests end to end"</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ STRUCTURE ============ -->
   <section class="day" id="structure">
     <div class="day-head">
       <span class="day-num">KẾT QUẢ</span>
-      <h2>Cấu trúc repo sau 5 ngày</h2>
+      <h2>Cấu trúc repo sau 6 ngày</h2>
     </div>
     <p class="day-sub">Từ spec tới code chạy được, mọi thứ trace ngược được về BR-001.</p>
 
@@ -1113,7 +1193,7 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
 │&nbsp;&nbsp; ├── UC-001-login.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
 │&nbsp;&nbsp; ├── UC-002-attendance-check.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 05</span>
 │&nbsp;&nbsp; ├── UC-004-request-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 03</span>
-│&nbsp;&nbsp; ├── UC-005-approve-leave.md
+│&nbsp;&nbsp; ├── UC-005-approve-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 06</span>
 │&nbsp;&nbsp; └── UC-006-monthly-report.md
 ├── entities/
 │&nbsp;&nbsp; └── entity-model.md
@@ -1124,7 +1204,7 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
 ├── <span class="new">api/</span>&nbsp;&nbsp;<span class="dim">NestJS + Drizzle ORM + PostgreSQL</span>
 │&nbsp;&nbsp; └── src/{attendance,auth,database,employees,leave-requests,mail,common}/
 └── <span class="new">web/</span>&nbsp;&nbsp;<span class="dim">Next.js App Router</span>
-&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/{login,attendance,leave-requests/new}/page.tsx
+&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/{login,attendance,leave-requests/new,manager/approvals}/page.tsx
     </div>
 
     <table class="commit-table" data-reveal>
@@ -1167,6 +1247,11 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
           <td class="hash">4215698</td>
           <td class="msg">feat(UC-002): implement attendance check-in/check-out end to end</td>
         </tr>
+        <tr>
+          <td><span class="day-pill">NGÀY 06</span></td>
+          <td class="hash">29673a7</td>
+          <td class="msg">feat(UC-005): implement approve/reject leave requests end to end</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1175,9 +1260,8 @@ docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim b
     <div class="foot-row">
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
-        Còn lại: UC-005 (duyệt/từ chối), UC-006 (báo cáo tháng) — theo đúng
-        owner đã chốt Ngày 01, cùng thứ tự spec → plan → implement →
-        verify như UC-001/UC-002/UC-004.
+        Còn lại: UC-006 (báo cáo tháng, HR) — use case cuối cùng, theo đúng
+        thứ tự spec → plan → implement → verify như 4 UC trước.
       </p>
     </div>
   </footer>
