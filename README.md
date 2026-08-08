@@ -295,3 +295,60 @@ git add apps/ specs/use-cases/UC-001-login.md
 git commit -m "feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it"
 git push
 ```
+
+## Day 05 — UC-002 chấm công vào/ra
+
+Mục tiêu Day 05: implement UC-002, và lần đầu verify **full luồng thật**
+(không chỉ unit test) qua Postgres thật ngay trong quy trình, thay vì để
+riêng một bước sau.
+
+### 1. Viết chi tiết UC-002 (`/aiup-core:use-case-spec UC-002`)
+
+Từ stub Day 01, elaborate `UC-002-attendance-check.md`: `Trigger` →
+`Preconditions` → `Main Flow` (5 bước) → `Alternative Flows` (A1 — chấm
+công ra) → 3 `Exceptions` (E1-E3, giữ nguyên E4 dùng chung với UC-001) → 6
+`Acceptance Criteria`. `Status` chuyển `draft` → `approved`.
+
+### 2. Implement
+
+- `apps/api/src/attendance/` — `AttendanceModule`, migration
+  `attendance` table (drizzle-kit generate, đúng 1 record/nhân
+  viên/ngày qua unique index), guard bằng `SessionAuthGuard` có sẵn từ
+  UC-001.
+- Check-in/check-out atomic qua `pg_advisory_xact_lock` theo
+  `employeeId` — cùng pattern chống race condition mà adversarial review
+  Ngày 03 đã bắt UC-004 sửa.
+- `apps/web/src/app/attendance/page.tsx` — trang chấm công, tự gọi
+  `GET /auth/me` để redirect `/login` nếu chưa đăng nhập.
+
+### 3. Verify — unit test + full luồng thật
+
+Chạy trong Docker (né lỗi virtiofs — xem Ngày 04), lần này thêm cả
+migrate/seed/build/curl thật qua Postgres, không dừng ở unit test:
+
+```bash
+docker compose up -d
+docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim bash -c '
+  apt-get update -qq && apt-get install -y -qq curl >/dev/null
+  cd /repo && npm ci && cd apps/api
+  export DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5433/hrtool
+  npm test -- src/attendance src/auth src/leave-requests
+  npx drizzle-kit migrate && npm run db:seed && npm run build
+  node dist/main.js &
+  sleep 2
+  # ... curl từng AC qua /api/auth/login + /api/attendance/*
+'
+```
+
+Kết quả: **21/21 unit test pass** (attendance + auth + leave-requests), và
+cả 6 AC đúng 100% qua HTTP thật — bao gồm cả một request `leave-requests`
+(UC-004) để xác nhận session guard vẫn hoạt động đúng sau khi thêm module
+mới (regression check).
+
+### 4. Commit + push chốt Day 05
+
+```bash
+git add apps/ specs/use-cases/UC-002-attendance-check.md
+git commit -m "feat(UC-002): implement attendance check-in/check-out end to end"
+git push
+```
