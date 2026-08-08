@@ -320,7 +320,7 @@
     <div class="hero-meta">
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;08</strong></span>
-      <span><strong>21</strong> commit</span>
+      <span><strong>23</strong> commit</span>
       <span><strong>5</strong> use case, <strong>5</strong> entity</span>
       <span><strong>5/5</strong> use case implement xong</span>
     </div>
@@ -1035,6 +1035,34 @@ git push">COPY</button>
         bị 403.</p>
       </div>
     </div>
+
+    <div class="step">
+      <div class="step-mark">6</div>
+      <div>
+        <h3>Ngày 5 kiểu case study gốc — dùng thử UI thật, không chỉ curl</h3>
+        <p>Case study gốc dành hẳn Ngày 5 để deploy staging cho chị Hà và
+        nhân viên dùng thử. Repo demo chưa có staging thật nên tự đóng vai
+        người dùng: chạy API + Web thật trong container sạch (build
+        production của <code>apps/web</code> dính bug prerender riêng của
+        Next 15.5.x, né bằng <code>next dev</code> — không qua virtiofs
+        nên không bị hang), rồi bấm tay qua cả 5 luồng UC trên trình duyệt
+        thật.</p>
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p><code>GET /api/employees</code> (danh sách cho trang login
+            picker) thiếu field <code>email</code> — nút "Đăng nhập bằng
+            Google" gọi <code>handleLogin(undefined)</code>, mọi lần đăng
+            nhập qua UI thật đều lỗi. <code>curl</code>/unit test trước
+            giờ không bắt được vì luôn hardcode sẵn email thật thay vì đọc
+            từ chính endpoint này.</p>
+          </div>
+        </div>
+        <p style="margin-top:.8rem;">Sau khi vá, đăng nhập + cả 5 luồng
+        (chấm công, xin nghỉ, duyệt, báo cáo) đều chạy đúng trên UI thật.
+        <strong>38/38 unit test pass</strong>.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ STRUCTURE ============ -->
@@ -1121,6 +1149,11 @@ git push">COPY</button>
           <td></td>
           <td class="hash">69e0539</td>
           <td class="msg">fix(UC-005): HR Director fallback when the requester has no manager (E5)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="hash">59d8f16</td>
+          <td class="msg">fix(UC-001): login picker was unusable — /api/employees dropped email</td>
         </tr>
       </tbody>
     </table>

@@ -315,3 +315,28 @@ git push
 Verify: 37/37 unit test pass, và qua HTTP thật — Minh (không có manager)
 nộp đơn, Hà (HR Director) duyệt được, balance trừ đúng 10→7, người khác
 vẫn bị 403.
+
+### Ngày 5 kiểu case study gốc — dùng thử UI thật, không chỉ curl
+
+Case study gốc dành hẳn Ngày 5 để deploy staging cho chị Hà và nhân viên
+dùng thử — repo demo này chưa có staging thật, nên tự đóng vai người dùng:
+chạy API + Web thật (build production của `apps/web` dính bug prerender
+riêng của Next 15.5.x không liên quan tới code, né bằng `next dev` chạy
+trong container sạch — không qua virtiofs nên không bị hang), rồi bấm tay
+qua cả 5 luồng UC trên trình duyệt thật.
+
+Phát hiện ngay 1 bug thật mà mọi lượt test bằng `curl` trước giờ đều bỏ
+lọt: `GET /api/employees` (danh sách nhân viên cho trang login picker)
+thiếu field `email` — nút "Đăng nhập bằng Google" gọi
+`handleLogin(undefined)`, mọi lần đăng nhập qua UI thật đều lỗi "email
+must be an email". Lý do curl/unit test không bắt được: mọi test trước
+giờ đều hardcode sẵn email thật (`lan.tran@company.com`...) thay vì đọc
+từ chính endpoint này.
+
+```bash
+git commit -m "fix(UC-001): login picker was unusable — /api/employees dropped email"
+git push
+```
+
+Sau khi vá, đăng nhập + cả 5 luồng (chấm công, xin nghỉ, duyệt, báo cáo)
+đều chạy đúng trên UI thật. 38/38 unit test pass.
