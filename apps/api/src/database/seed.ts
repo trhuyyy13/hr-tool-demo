@@ -42,9 +42,19 @@ async function seed() {
     })
     .returning();
 
-  const [lan, hung, mai, nam] = await db
+  const [ha, lan, hung, mai, nam] = await db
     .insert(schema.employee)
     .values([
+      {
+        // UC-005 E5 fallback approver — HR_DIRECTOR_EMAIL defaults to her
+        // email, so Minh (no manager) always has someone to approve his leave.
+        fullName: 'Phạm Thị Hà',
+        email: 'ha.pham@company.com',
+        department: 'HR',
+        managerId: null,
+        annualLeaveBalance: 12,
+        startDate: '2019-05-01',
+      },
       {
         fullName: 'Trần Thị Lan',
         email: 'lan.tran@company.com',
@@ -97,6 +107,7 @@ async function seed() {
 
   console.log('Seeded employees:');
   console.log(`  ${minh.id} Minh (manager, no manager, balance 10)`);
+  console.log(`  ${ha.id} Hà (HR Director, no manager, balance 12) — try UC-005 AC-8`);
   console.log(`  ${lan.id} Lan (balance 8) — try AC-1`);
   console.log(`  ${hung.id} Hùng (balance 2) — try AC-3`);
   console.log(`  ${mai.id} Mai (balance 8, pending ${toISODate(monday)}..${toISODate(wednesday)}) — try AC-4`);

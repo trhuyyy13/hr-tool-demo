@@ -21,7 +21,9 @@ Employee bấm "Xin nghỉ phép" ở trang Dashboard
 2. Employee điền và submit
 3. Hệ thống validate (xem Acceptance Criteria)
 4. Hệ thống tạo `LeaveRequest` với `status = "pending"`
-5. Hệ thống gửi email tới Manager kèm link duyệt
+5. Hệ thống gửi email tới Manager kèm link duyệt — nếu Employee không có
+   `manager_id` (đứng đầu tổ chức), gửi tới HR Director thay (xem UC-005
+   E5)
 6. Hệ thống quay về Dashboard với toast "Đã gửi yêu cầu"
 
 ## Alternative Flows
@@ -74,3 +76,6 @@ Employee bấm "Xin nghỉ phép" ở trang Dashboard
   Rules) — thay thế ở v3
 - v3 (Ngày 3, An): bản chốt — Trigger / Main Flow / Alternative Flows /
   Exceptions / Acceptance Criteria (Given-When-Then), thay format v2
+- v4 (2026-08-08, An): Main Flow bước 5 ghi rõ fallback HR Director khi
+  Employee không có manager (xem UC-005 E5) — phát hiện khi đối chiếu
+  lại với case study gốc

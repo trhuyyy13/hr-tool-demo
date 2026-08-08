@@ -19,7 +19,9 @@ chờ duyệt), chọn 1 `LeaveRequest` đang `pending`.
 
 ## Preconditions
 - Manager đã login (UC-001).
-- Manager là `manager_id` trực tiếp của Employee gửi yêu cầu.
+- Manager là `manager_id` trực tiếp của Employee gửi yêu cầu — **trừ khi
+  Employee không có manager** (`manager_id = null`, ví dụ nhân viên đứng
+  đầu tổ chức), trường hợp đó HR Director là người duyệt thay (xem E5).
 
 ## Main Flow (Duyệt)
 1. Manager xem chi tiết yêu cầu (nhân viên, loại nghỉ, from/to date, lý do,
@@ -59,6 +61,11 @@ chờ duyệt), chọn 1 `LeaveRequest` đang `pending`.
 - **E4.** Duyệt `type = "annual"` nhưng `annual_leave_balance` hiện tại
   không đủ (có thể đã bị trừ bởi một `LeaveRequest` khác được duyệt sau
   khi request này được gửi): reject, hiển thị "Số ngày phép còn lại: X".
+- **E5.** Employee gửi yêu cầu không có `manager_id` (đứng đầu tổ chức):
+  **HR Director** — một Employee cố định do demo cấu hình
+  (`HR_DIRECTOR_EMAIL`) — được coi là người có quyền duyệt/từ chối thay
+  cho vị trí "manager trực tiếp" ở E1. UC-004 cũng dùng cùng fallback này
+  để biết gửi email duyệt tới ai khi Employee không có manager.
 
 ## Acceptance Criteria
 
@@ -105,8 +112,25 @@ day (annual)
 **Then:** reject với message "Số ngày phép còn lại: 2"
 **And:** `status` vẫn là `pending`
 
+### AC-8: HR Director duyệt thay khi Employee không có manager
+**Given:** Employee không có `manager_id` (đứng đầu tổ chức), có
+`LeaveRequest` đang pending
+**When:** HR Director bấm "Duyệt"
+**Then:** `status = "approved"`, `approver_id` = HR Director — giống hệt
+AC-1, chỉ khác người duyệt
+
+## Business Rules
+- **HR Director** (E5): demo dùng 1 Employee cố định, xác định qua env
+  `HR_DIRECTOR_EMAIL` (mặc định `ha.pham@company.com`, seed sẵn) — đứng
+  vai người duyệt/nhận email khi Employee không có manager. Đây là fix
+  phát sinh từ thực tế vận hành (nhân viên đứng đầu tổ chức không có ai
+  duyệt hộ), không phải rule đã tính trước từ ngày viết spec đầu tiên.
+
 ## History
 - v1 (2026-08-06, Diệp): stub từ `/specify`
 - v2 (2026-08-08, Diệp): elaboration đầy đủ — Trigger/Main Flow/Alternative
   Flows/Exceptions/Acceptance Criteria, cùng format đã chốt ở
   UC-001/UC-002/UC-004
+- v3 (2026-08-08, Diệp): thêm E5/AC-8 — HR Director duyệt thay khi
+  Employee không có manager (`manager_id = null`); phát hiện khi đối
+  chiếu lại với case study gốc, chưa từng test tới trước đó

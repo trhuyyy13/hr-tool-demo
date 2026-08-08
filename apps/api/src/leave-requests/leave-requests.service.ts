@@ -10,6 +10,10 @@ import { LeaveRequestsRepository, type DecideResult } from './leave-requests.rep
 
 const NOT_PENDING_MESSAGE = 'Yêu cầu không tồn tại hoặc đã được xử lý';
 
+// UC-005 E5 — demo stand-in for a real "HR Director" role (no `role` column
+// on Employee yet, same gap UC-006 already lives with).
+const HR_DIRECTOR_EMAIL = process.env.HR_DIRECTOR_EMAIL ?? 'ha.pham@company.com';
+
 @Injectable()
 export class LeaveRequestsService {
   constructor(
@@ -65,17 +69,16 @@ export class LeaveRequestsService {
     const row = result.row;
 
     // AC-1: balance is NOT decremented here — only on approval (UC-005).
-    if (employee.managerId) {
-      const manager = await this.employeesRepository.findById(employee.managerId);
-      if (manager) {
-        await this.mailService.sendLeaveApprovalRequest({
-          to: manager.email,
-          leaveRequestId: row.id,
-          employeeName: employee.fullName,
-          fromDate: row.fromDate,
-          toDate: row.toDate,
-        });
-      }
+    // E5: no manager -> notify the HR Director fallback instead.
+    const approver = await this.resolveApprover(employee);
+    if (approver) {
+      await this.mailService.sendLeaveApprovalRequest({
+        to: approver.email,
+        leaveRequestId: row.id,
+        employeeName: employee.fullName,
+        fromDate: row.fromDate,
+        toDate: row.toDate,
+      });
     }
 
     return this.toResponse(row);
@@ -118,9 +121,11 @@ export class LeaveRequestsService {
       throw new BadRequestException(NOT_PENDING_MESSAGE);
     }
 
-    // E1 — must be the requester's direct manager.
+    // E1/E5 — must be the requester's direct manager, or the HR Director
+    // fallback when the requester has none.
     const employee = await this.employeesRepository.findById(existing.employeeId);
-    if (!employee || employee.managerId !== managerId) {
+    const approver = employee ? await this.resolveApprover(employee) : undefined;
+    if (!approver || approver.id !== managerId) {
       throw new ForbiddenException('Bạn không có quyền duyệt yêu cầu này');
     }
 
@@ -145,6 +150,16 @@ export class LeaveRequestsService {
     }
 
     return this.toResponse(result.row);
+  }
+
+  // UC-005 E5: an Employee with no manager (org's top) falls back to a
+  // fixed HR Director — used both to pick who gets notified (UC-004) and
+  // who's authorized to decide (UC-005).
+  private async resolveApprover(employee: { managerId: number | null }) {
+    if (employee.managerId) {
+      return this.employeesRepository.findById(employee.managerId);
+    }
+    return this.employeesRepository.findByEmail(HR_DIRECTOR_EMAIL);
   }
 
   private toResponse(row: {

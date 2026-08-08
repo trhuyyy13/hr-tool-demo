@@ -36,8 +36,22 @@ function makeDecideRepository(overrides: {
 }
 
 function makeEmployeesRepository(employeesById: Record<number, MockedEmployee>) {
-  return { findById: jest.fn(async (id: number) => employeesById[id]) };
+  return {
+    findById: jest.fn(async (id: number) => employeesById[id]),
+    findByEmail: jest.fn(async (email: string) =>
+      Object.values(employeesById).find((e) => e.email.toLowerCase() === email.toLowerCase()),
+    ),
+  };
 }
+
+// UC-005 E5 — default HR_DIRECTOR_EMAIL fallback used when an employee has no manager.
+const HR_DIRECTOR: MockedEmployee = {
+  id: 10,
+  fullName: 'Phạm Thị Hà',
+  email: 'ha.pham@company.com',
+  managerId: null,
+  annualLeaveBalance: 12,
+};
 
 function makeMailService() {
   return { sendLeaveApprovalRequest: jest.fn(async () => undefined) };
@@ -182,6 +196,32 @@ describe('LeaveRequestsService — UC-004 acceptance criteria', () => {
     expect(result.status).toBe('pending');
     expect(repository.createIfNoOverlap).toHaveBeenCalled();
   });
+
+  // E5: employee has no manager (org's top) -> HR Director gets the email instead.
+  it('E5: notifies the HR Director when the employee has no manager', async () => {
+    const createdRow = {
+      id: 102,
+      employeeId: 1,
+      type: 'annual',
+      fromDate: '2025-03-20',
+      toDate: '2025-03-22',
+      reason: 'Nghỉ phép',
+      status: 'pending',
+    };
+    const repository = makeRepository({ kind: 'created', row: createdRow });
+    const employeesRepository = makeEmployeesRepository({
+      1: EMPLOYEE({ id: 1, managerId: null, fullName: 'Nguyễn Văn Minh' }),
+      10: HR_DIRECTOR,
+    });
+    const mailService = makeMailService();
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, mailService as any);
+
+    await service.create(1, { type: 'annual', fromDate: '2025-03-20', toDate: '2025-03-22', reason: 'Nghỉ phép' });
+
+    expect(mailService.sendLeaveApprovalRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ to: HR_DIRECTOR.email }),
+    );
+  });
 });
 
 const PENDING_ANNUAL = {
@@ -208,7 +248,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       findById: jest.fn(async () => PENDING_ANNUAL),
       decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
     });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     const result = await service.approve(1, 200);
@@ -226,7 +266,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       findById: jest.fn(async () => PENDING_SICK),
       decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
     });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     await service.approve(1, 201);
@@ -241,7 +281,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       findById: jest.fn(async () => PENDING_ANNUAL),
       decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
     });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     const result = await service.reject(1, 200, { reason: 'Trùng lịch dự án' });
@@ -255,7 +295,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
   // AC-4: reject without a reason -> rejected before the repository is ever touched.
   it('AC-4: rejects the reject when no reason is given', async () => {
     const repository = makeDecideRepository({ findById: jest.fn(async () => PENDING_ANNUAL) });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     await expect(service.reject(1, 200, { reason: '  ' })).rejects.toThrow(
@@ -267,7 +307,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
   // AC-5: caller is not the requester's direct manager -> forbidden.
   it('AC-5: forbids approval from someone who is not the direct manager', async () => {
     const repository = makeDecideRepository({ findById: jest.fn(async () => PENDING_ANNUAL) });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     await expect(service.approve(99, 200)).rejects.toThrow(
@@ -282,7 +322,7 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       findById: jest.fn(async () => PENDING_ANNUAL),
       decide: jest.fn(async () => ({ kind: 'not-pending' })),
     });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     await expect(service.approve(1, 200)).rejects.toThrow(
@@ -296,11 +336,49 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       findById: jest.fn(async () => PENDING_ANNUAL),
       decide: jest.fn(async () => ({ kind: 'insufficient-balance', balance: 2 })),
     });
-    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER, 2: EMPLOYEE({ managerId: 1 }) });
     const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
 
     await expect(service.approve(1, 200)).rejects.toThrow(
       new BadRequestException('Số ngày phép còn lại: 2'),
     );
+  });
+
+  // AC-8: employee has no manager -> the HR Director fallback can approve.
+  it('AC-8: HR Director approves when the employee has no manager', async () => {
+    const pendingNoManager = { ...PENDING_ANNUAL, employeeId: 1 };
+    const decidedRow = { ...pendingNoManager, status: 'approved' };
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => pendingNoManager),
+      decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
+    });
+    const employeesRepository = makeEmployeesRepository({
+      1: EMPLOYEE({ id: 1, managerId: null, fullName: 'Nguyễn Văn Minh' }),
+      10: HR_DIRECTOR,
+    });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    const result = await service.approve(HR_DIRECTOR.id, 200);
+
+    expect(result.status).toBe('approved');
+    expect(repository.decide).toHaveBeenCalledWith(
+      expect.objectContaining({ managerId: HR_DIRECTOR.id, decision: 'approved' }),
+    );
+  });
+
+  // E5 negative: employee has no manager, but the caller isn't the HR Director either.
+  it('E5: forbids approval from someone who is neither the manager nor the HR Director', async () => {
+    const pendingNoManager = { ...PENDING_ANNUAL, employeeId: 1 };
+    const repository = makeDecideRepository({ findById: jest.fn(async () => pendingNoManager) });
+    const employeesRepository = makeEmployeesRepository({
+      1: EMPLOYEE({ id: 1, managerId: null, fullName: 'Nguyễn Văn Minh' }),
+      10: HR_DIRECTOR,
+    });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await expect(service.approve(99, 200)).rejects.toThrow(
+      new ForbiddenException('Bạn không có quyền duyệt yêu cầu này'),
+    );
+    expect(repository.decide).not.toHaveBeenCalled();
   });
 });
