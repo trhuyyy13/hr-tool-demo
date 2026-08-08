@@ -27,7 +27,6 @@ export const employee = pgTable(
 );
 
 // Entity model: specs/entities/entity-model.md#leaverequest
-// UC-004 scope only (Employee + LeaveRequest) — ApprovalLog is UC-005's.
 export const leaveRequest = pgTable(
   'leave_request',
   {
@@ -54,6 +53,21 @@ export const leaveRequest = pgTable(
     ),
   ],
 );
+
+// Entity model: specs/entities/entity-model.md#approvallog
+// UC-005 scope: one row per status change on a LeaveRequest.
+export const approvalLog = pgTable('approval_log', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  leaveRequestId: integer('leave_request_id')
+    .notNull()
+    .references(() => leaveRequest.id),
+  fromStatus: text('from_status').notNull(),
+  toStatus: text('to_status').notNull(),
+  changedBy: integer('changed_by')
+    .notNull()
+    .references(() => employee.id),
+  changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 // Entity model: specs/entities/entity-model.md#attendance
 // UC-002 scope: check-in/check-out only. Exactly 1 row per employee per day.

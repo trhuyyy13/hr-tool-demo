@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { countBusinessDays, todayDateString } from '../common/date.util.js';
 import { EmployeesRepository } from '../employees/employees.repository.js';
 import { MailService } from '../mail/mail.service.js';
 import type { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
 import type { LeaveRequestResponse } from './dto/leave-request.response.js';
-import { LeaveRequestsRepository } from './leave-requests.repository.js';
+import type { PendingLeaveRequestResponse } from './dto/pending-leave-request.response.js';
+import type { RejectLeaveRequestDto } from './dto/reject-leave-request.dto.js';
+import { LeaveRequestsRepository, type DecideResult } from './leave-requests.repository.js';
+
+const NOT_PENDING_MESSAGE = 'Yêu cầu không tồn tại hoặc đã được xử lý';
 
 @Injectable()
 export class LeaveRequestsService {
@@ -74,6 +78,84 @@ export class LeaveRequestsService {
       }
     }
 
+    return this.toResponse(row);
+  }
+
+  // UC-005 Main Flow step 1 — requests from this manager's direct reports only.
+  async listPendingForManager(managerId: number): Promise<PendingLeaveRequestResponse[]> {
+    const rows = await this.repository.findPendingForManager(managerId);
+    return rows.map(({ leave_request, employee }) => ({
+      ...this.toResponse(leave_request),
+      employeeName: employee.fullName,
+    }));
+  }
+
+  // UC-005 Main Flow / AC-1 / AC-2.
+  async approve(managerId: number, leaveRequestId: number): Promise<LeaveRequestResponse> {
+    return this.decide(managerId, leaveRequestId, 'approved');
+  }
+
+  // UC-005 A1 / E3 / AC-3 / AC-4.
+  async reject(
+    managerId: number,
+    leaveRequestId: number,
+    dto: RejectLeaveRequestDto,
+  ): Promise<LeaveRequestResponse> {
+    if (!dto.reason?.trim()) {
+      throw new BadRequestException('Cần nhập lý do từ chối');
+    }
+    return this.decide(managerId, leaveRequestId, 'rejected', dto.reason);
+  }
+
+  private async decide(
+    managerId: number,
+    leaveRequestId: number,
+    decision: 'approved' | 'rejected',
+    rejectReason?: string,
+  ): Promise<LeaveRequestResponse> {
+    const existing = await this.repository.findById(leaveRequestId);
+    if (!existing) {
+      throw new BadRequestException(NOT_PENDING_MESSAGE);
+    }
+
+    // E1 — must be the requester's direct manager.
+    const employee = await this.employeesRepository.findById(existing.employeeId);
+    if (!employee || employee.managerId !== managerId) {
+      throw new ForbiddenException('Bạn không có quyền duyệt yêu cầu này');
+    }
+
+    const businessDays =
+      existing.type === 'annual' ? countBusinessDays(existing.fromDate, existing.toDate) : 0;
+
+    // E2/E4 + the actual status/balance/ApprovalLog update, atomic (see repository).
+    const result: DecideResult = await this.repository.decide({
+      leaveRequestId,
+      employeeId: existing.employeeId,
+      managerId,
+      decision,
+      businessDays,
+      rejectReason,
+    });
+
+    if (result.kind === 'not-pending') {
+      throw new BadRequestException(NOT_PENDING_MESSAGE);
+    }
+    if (result.kind === 'insufficient-balance') {
+      throw new BadRequestException(`Số ngày phép còn lại: ${result.balance}`);
+    }
+
+    return this.toResponse(result.row);
+  }
+
+  private toResponse(row: {
+    id: number;
+    employeeId: number;
+    type: string;
+    fromDate: string;
+    toDate: string;
+    reason: string;
+    status: string;
+  }): LeaveRequestResponse {
     return {
       id: row.id,
       employeeId: row.employeeId,

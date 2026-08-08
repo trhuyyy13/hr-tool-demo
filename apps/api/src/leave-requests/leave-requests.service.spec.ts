@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { jest } from '@jest/globals';
 
 // Isolate the service from real calendar math — each test sets its own
@@ -22,6 +22,17 @@ type MockedEmployee = {
 
 function makeRepository(overlapResult: { kind: 'overlap' } | { kind: 'created'; row: any }) {
   return { createIfNoOverlap: jest.fn(async () => overlapResult) };
+}
+
+function makeDecideRepository(overrides: {
+  findById?: any;
+  decide?: any;
+} = {}) {
+  return {
+    findById: jest.fn(async () => undefined),
+    decide: jest.fn(async () => ({ kind: 'decided', row: {} })),
+    ...overrides,
+  };
 }
 
 function makeEmployeesRepository(employeesById: Record<number, MockedEmployee>) {
@@ -170,5 +181,126 @@ describe('LeaveRequestsService — UC-004 acceptance criteria', () => {
 
     expect(result.status).toBe('pending');
     expect(repository.createIfNoOverlap).toHaveBeenCalled();
+  });
+});
+
+const PENDING_ANNUAL = {
+  id: 200,
+  employeeId: 2,
+  type: 'annual',
+  fromDate: '2025-03-20',
+  toDate: '2025-03-22',
+  reason: 'Nghỉ lễ',
+  status: 'pending',
+};
+
+const PENDING_SICK = { ...PENDING_ANNUAL, id: 201, type: 'sick' };
+
+describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
+  beforeEach(() => {
+    (countBusinessDays as jest.Mock).mockReturnValue(3);
+  });
+
+  // AC-1: annual, manager matches, balance sufficient -> approved + ApprovalLog (repository's job).
+  it('AC-1: approves an annual request as the direct manager', async () => {
+    const decidedRow = { ...PENDING_ANNUAL, status: 'approved' };
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => PENDING_ANNUAL),
+      decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
+    });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    const result = await service.approve(1, 200);
+
+    expect(result.status).toBe('approved');
+    expect(repository.decide).toHaveBeenCalledWith(
+      expect.objectContaining({ leaveRequestId: 200, managerId: 1, decision: 'approved', businessDays: 3 }),
+    );
+  });
+
+  // AC-2: sick leave -> businessDays passed as 0, balance untouched by this layer (repository's concern).
+  it('AC-2: approves a sick request without counting business days', async () => {
+    const decidedRow = { ...PENDING_SICK, status: 'approved' };
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => PENDING_SICK),
+      decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
+    });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await service.approve(1, 201);
+
+    expect(repository.decide).toHaveBeenCalledWith(expect.objectContaining({ businessDays: 0 }));
+  });
+
+  // AC-3: reject with a reason -> passed through to the repository.
+  it('AC-3: rejects with a reason', async () => {
+    const decidedRow = { ...PENDING_ANNUAL, status: 'rejected', rejectReason: 'Trùng lịch dự án' };
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => PENDING_ANNUAL),
+      decide: jest.fn(async () => ({ kind: 'decided', row: decidedRow })),
+    });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    const result = await service.reject(1, 200, { reason: 'Trùng lịch dự án' });
+
+    expect(result.status).toBe('rejected');
+    expect(repository.decide).toHaveBeenCalledWith(
+      expect.objectContaining({ decision: 'rejected', rejectReason: 'Trùng lịch dự án' }),
+    );
+  });
+
+  // AC-4: reject without a reason -> rejected before the repository is ever touched.
+  it('AC-4: rejects the reject when no reason is given', async () => {
+    const repository = makeDecideRepository({ findById: jest.fn(async () => PENDING_ANNUAL) });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await expect(service.reject(1, 200, { reason: '  ' })).rejects.toThrow(
+      new BadRequestException('Cần nhập lý do từ chối'),
+    );
+    expect(repository.decide).not.toHaveBeenCalled();
+  });
+
+  // AC-5: caller is not the requester's direct manager -> forbidden.
+  it('AC-5: forbids approval from someone who is not the direct manager', async () => {
+    const repository = makeDecideRepository({ findById: jest.fn(async () => PENDING_ANNUAL) });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await expect(service.approve(99, 200)).rejects.toThrow(
+      new ForbiddenException('Bạn không có quyền duyệt yêu cầu này'),
+    );
+    expect(repository.decide).not.toHaveBeenCalled();
+  });
+
+  // AC-6: request no longer pending -> repository reports 'not-pending'.
+  it('AC-6: rejects deciding a request that is no longer pending', async () => {
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => PENDING_ANNUAL),
+      decide: jest.fn(async () => ({ kind: 'not-pending' })),
+    });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await expect(service.approve(1, 200)).rejects.toThrow(
+      new BadRequestException('Yêu cầu không tồn tại hoặc đã được xử lý'),
+    );
+  });
+
+  // AC-7: balance dropped below what's needed since the request was submitted.
+  it('AC-7: rejects approval when the balance is no longer sufficient', async () => {
+    const repository = makeDecideRepository({
+      findById: jest.fn(async () => PENDING_ANNUAL),
+      decide: jest.fn(async () => ({ kind: 'insufficient-balance', balance: 2 })),
+    });
+    const employeesRepository = makeEmployeesRepository({ 2: EMPLOYEE({ managerId: 1 }) });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    await expect(service.approve(1, 200)).rejects.toThrow(
+      new BadRequestException('Số ngày phép còn lại: 2'),
+    );
   });
 });

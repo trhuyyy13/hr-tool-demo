@@ -13,6 +13,9 @@ export default function HomePage() {
       <p>
         <Link href="/leave-requests/new">Xin nghỉ phép (UC-004) →</Link>
       </p>
+      <p>
+        <Link href="/manager/approvals">Duyệt nghỉ phép (UC-005) →</Link>
+      </p>
     </main>
   );
 }
