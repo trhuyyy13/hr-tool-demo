@@ -300,6 +300,7 @@
       <a class="navlink" href="#day01">NGÀY 01</a>
       <a class="navlink" href="#day02">NGÀY 02</a>
       <a class="navlink" href="#day03">NGÀY 03</a>
+      <a class="navlink" href="#day04">NGÀY 04</a>
       <a class="navlink" href="#structure">CẤU TRÚC</a>
     </nav>
   </div>
@@ -910,11 +911,106 @@ npm test">COPY</button>
     </div>
   </section>
 
+  <section class="day" id="day04">
+    <div class="day-head">
+      <span class="day-num">NGÀY 04</span>
+      <h2>UC-001 và trả nợ demo auth của UC-004</h2>
+    </div>
+    <p class="day-sub">
+      Mục tiêu: build UC-001 (login) và dùng nó để thay thế header demo
+      <code>x-demo-employee-id</code> mà adversarial review Ngày 03 đã gắn
+      cảnh báo tạm thời.
+    </p>
+
+    <div class="step">
+      <div class="step-mark">1</div>
+      <div>
+        <h3>Viết chi tiết UC-001</h3>
+        <p>Từ stub Ngày 01, elaborate <code>UC-001-login.md</code> thành spec
+        đầy đủ: <code>Trigger</code> → <code>Preconditions</code> →
+        <code>Main Flow</code> (6 bước) → <code>Alternative Flows</code>
+        (A1 — đã có session hợp lệ) → 4 <code>Exceptions</code> (E1&#8209;E4)
+        → 6 <code>Acceptance Criteria</code> dạng Given&#8209;When&#8209;Then.
+        Status: <code>draft</code> → <code>approved</code>.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">claude code</span>
+            <button class="copy-btn" type="button" data-copy="/aiup-core:use-case-spec UC-001">COPY</button>
+          </div>
+          <pre><code class="k">/aiup-core:use-case-spec UC-001</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">2</div>
+      <div>
+        <h3>Implement — session cookie thay cho header giả mạo</h3>
+        <p>Google OAuth thật chưa nối (không có credential), nên bước 2&#8209;4
+        của Main Flow (redirect sang Google, xác thực, Google trả email đã
+        verify) được đứng vai bằng một trang "picker" — chọn 1 trong các
+        nhân viên demo, coi như email đó đã được Google xác thực xong. Seam
+        thay được sau, không lẫn vào business logic — giống cách UC-004 mock
+        email ở Ngày 03.</p>
+        <ul style="margin:.6rem 0 0; padding-left:1.1rem; color:var(--fg-dim);">
+          <li><code>apps/api/src/auth/</code> — <code>AuthModule</code>,
+          <code>AuthController</code> (<code>POST /auth/login</code>,
+          <code>POST /auth/logout</code>, <code>GET /auth/me</code>),
+          session HMAC&#8209;signed 8h TTL, <code>SessionAuthGuard</code> +
+          <code>@CurrentEmployeeId()</code>.</li>
+          <li><strong>Retrofit UC-004</strong>: <code>leave-requests.controller.ts</code>
+          bỏ header <code>x-demo-employee-id</code>, dùng
+          <code>SessionAuthGuard</code> — đúng lỗ hổng adversarial review
+          Ngày 03 cảnh báo, giờ vá thật thay vì chỉ chặn boot production.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">3</div>
+      <div>
+        <h3>Verify — jest treo trên máy, chạy qua Docker</h3>
+        <p><code>npm test</code> (jest + ts-jest ESM) bị treo vô thời hạn
+        trên shell cục bộ — lỗi môi trường macOS/Docker Desktop, không phải
+        lỗi code. Xác nhận bằng cách chạy lại trong container Linux sạch,
+        không đụng <code>node_modules</code> thật trên máy:</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="docker run --rm -v &quot;$(pwd)&quot;:/repo -v /repo/node_modules node:22-slim \
+  bash -c &quot;cd /repo && npm ci && cd apps/api && npm test -- src/auth&quot;">COPY</button>
+          </div>
+          <pre><code class="l">docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim \</code><code class="l">  bash -c "cd /repo && npm ci && cd apps/api && npm test -- src/auth"</code></pre>
+        </div>
+        <p style="margin-top:.8rem;">Kết quả: <strong>3 test suite / 10 test pass</strong>
+        (<code>auth.service</code>, <code>session-auth.guard</code>,
+        <code>session.util</code> — đủ AC-1, AC-2, AC-5, AC-6).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">4</div>
+      <div>
+        <h3>Commit chốt Ngày 04</h3>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it&quot;">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it"</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ STRUCTURE ============ -->
   <section class="day" id="structure">
     <div class="day-head">
       <span class="day-num">KẾT QUẢ</span>
-      <h2>Cấu trúc repo sau 3 ngày</h2>
+      <h2>Cấu trúc repo sau 4 ngày</h2>
     </div>
     <p class="day-sub">Từ spec tới code chạy được, mọi thứ trace ngược được về BR-001.</p>
 
@@ -923,7 +1019,7 @@ npm test">COPY</button>
 ├── business-requirements/
 │&nbsp;&nbsp; └── BR-001-hr-tool.md&nbsp;&nbsp;<span class="dim">← nguồn gốc: 90' với chị Hà</span>
 ├── use-cases/
-│&nbsp;&nbsp; ├── UC-001-login.md
+│&nbsp;&nbsp; ├── UC-001-login.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 04</span>
 │&nbsp;&nbsp; ├── UC-002-attendance-check.md
 │&nbsp;&nbsp; ├── UC-004-request-leave.md&nbsp;&nbsp;<span class="dim">← spec đầy đủ, Ngày 03</span>
 │&nbsp;&nbsp; ├── UC-005-approve-leave.md
@@ -933,11 +1029,11 @@ npm test">COPY</button>
 └── diagrams/
 &nbsp;&nbsp;&nbsp;&nbsp; └── use-cases.puml
 
-<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03</span>
+<span class="dim">apps/</span>&nbsp;&nbsp;<span class="dim">← mới, Ngày 03; auth/ mới, Ngày 04</span>
 ├── <span class="new">api/</span>&nbsp;&nbsp;<span class="dim">NestJS + Drizzle ORM + PostgreSQL</span>
-│&nbsp;&nbsp; └── src/{database,employees,leave-requests,mail,common}/
+│&nbsp;&nbsp; └── src/{auth,database,employees,leave-requests,mail,common}/
 └── <span class="new">web/</span>&nbsp;&nbsp;<span class="dim">Next.js App Router</span>
-&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/leave-requests/new/page.tsx
+&nbsp;&nbsp;&nbsp;&nbsp; └── src/app/{login,leave-requests/new}/page.tsx
     </div>
 
     <table class="commit-table" data-reveal>
@@ -970,6 +1066,11 @@ npm test">COPY</button>
           <td class="hash">e862a31</td>
           <td class="msg">feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)</td>
         </tr>
+        <tr>
+          <td><span class="day-pill">NGÀY 04</span></td>
+          <td class="hash">3ba2732</td>
+          <td class="msg">feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -978,8 +1079,9 @@ npm test">COPY</button>
     <div class="foot-row">
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
-        Ngày 04&#8209;05: elaborate UC-001 (login) để UC-004 có auth thật, rồi
-        UC-005 (duyệt/từ chối) — cùng entity <code>LeaveRequest</code> vừa xong.
+        Ngày 05: UC-002 (chấm công), UC-005 (duyệt/từ chối), UC-006 (báo cáo
+        tháng) — theo đúng owner đã chốt Ngày 01, cùng thứ tự spec → plan →
+        chờ <code>/tasks</code> → implement như UC-001/UC-004.
       </p>
     </div>
   </footer>

@@ -11,7 +11,7 @@ specs/
   business-requirements/
     BR-001-hr-tool.md          # business requirement gốc
   use-cases/
-    UC-001-login.md            # đăng nhập (Google SSO)
+    UC-001-login.md            # đăng nhập (Google SSO) — spec chi tiết, status approved
     UC-002-attendance-check.md # chấm công vào/ra
     UC-004-request-leave.md    # xin nghỉ phép — spec chi tiết, status approved
     UC-005-approve-leave.md    # duyệt/từ chối nghỉ phép (manager)
@@ -21,8 +21,9 @@ specs/
   diagrams/
     use-cases.puml             # PlantUML use case diagram (actor <-> UC)
 apps/
-  api/                         # NestJS + Drizzle ORM + PostgreSQL — implement UC-004
-  web/                         # Next.js App Router — trang /leave-requests/new
+  api/                         # NestJS + Drizzle ORM + PostgreSQL — implement UC-001, UC-004
+    src/auth/                  # UC-001: session cookie, SessionAuthGuard, login picker (demo SSO)
+  web/                         # Next.js App Router — trang /login, /leave-requests/new
 docker-compose.yml             # Postgres cho local dev (cổng 5433)
 .claude/skills/                # speckit skills cho Claude Code (/specify, /plan, /tasks...)
 .specify/                      # templates, scripts, constitution cho spec-kit workflow
@@ -235,4 +236,62 @@ duyệt).
 ```bash
 git add apps/ docker-compose.yml package.json package-lock.json specs/use-cases/UC-004-request-leave.md
 git commit -m "feat(UC-004): implement request-leave end to end (NestJS + Next.js + Drizzle)"
+```
+
+## Day 04 — UC-001 và trả nợ demo auth của UC-004
+
+Mục tiêu Day 04: build UC-001 (login) và dùng nó để thay thế header demo
+`x-demo-employee-id` mà adversarial review Day 03 đã gắn cảnh báo tạm thời.
+
+### 1. Viết chi tiết UC-001 (`/aiup-core:use-case-spec UC-001`)
+
+Từ stub Day 01, elaborate `UC-001-login.md` thành spec đầy đủ: `Trigger` →
+`Preconditions` → `Main Flow` (6 bước) → `Alternative Flows` (A1 — đã có
+session hợp lệ) → 4 `Exceptions` (E1-E4) → 6 `Acceptance Criteria` dạng
+Given-When-Then (AC-1..AC-6). `Status` chuyển `draft` → `approved`.
+
+### 2. Implement — session cookie thay cho header giả mạo
+
+Độ chân thực giữ nguyên tinh thần demo của UC-004: Google OAuth thật chưa
+nối (không có credential), nên bước 2-4 của Main Flow (redirect sang Google,
+xác thực, Google trả email đã verify) được đứng vai bằng một trang
+"picker" — chọn 1 trong các nhân viên demo, coi như email đó đã được
+Google xác thực xong. Đây là seam thay được sau, không lẫn vào business
+logic (giống cách UC-004 mock email).
+
+- `apps/api/src/auth/` — `AuthModule`, `AuthController`
+  (`POST /auth/login`, `POST /auth/logout`, `GET /auth/me`), `AuthService`,
+  session HMAC-signed (`session.util.ts`, TTL 8h), `SessionAuthGuard` +
+  `@CurrentEmployeeId()` decorator.
+- `apps/web/src/app/login/page.tsx` — trang picker, tự gọi `GET /auth/me`
+  lúc mount để bỏ qua picker nếu đã có session hợp lệ (AC-5).
+- **Retrofit UC-004**: `leave-requests.controller.ts` bỏ header
+  `x-demo-employee-id`, dùng `@UseGuards(SessionAuthGuard)` +
+  `@CurrentEmployeeId()` — đúng lỗ hổng adversarial review Day 03 đã cảnh
+  báo, giờ vá bằng UC-001 thay vì chỉ chặn boot production.
+- `main.ts`: thêm `cookie-parser`, bật `credentials: true` cho CORS; vẫn
+  giữ nguyên chặn khởi động khi `NODE_ENV=production` — login vẫn là
+  picker giả, chưa phải Google OAuth thật.
+
+### 3. Verify — jest treo trên máy, chạy qua Docker
+
+`npm test` (jest + ts-jest ESM) bị treo vô thời hạn trên shell cục bộ (một
+lỗi môi trường macOS/Docker Desktop, không phải lỗi code — xác nhận bằng
+cách chạy lại full trong container Linux sạch, không đụng `node_modules`
+thật trên máy):
+
+```bash
+docker run --rm -v "$(pwd)":/repo -v /repo/node_modules node:22-slim \
+  bash -c "cd /repo && npm ci && cd apps/api && npm test -- src/auth"
+```
+
+Kết quả: **3 test suite / 10 test pass** (`auth.service`,
+`session-auth.guard`, `session.util` — đủ AC-1, AC-2, AC-5, AC-6).
+
+### 4. Commit chốt Day 04
+
+```bash
+git add apps/ specs/use-cases/UC-001-login.md
+git commit -m "feat(UC-001): implement login (demo Google-SSO stand-in), retrofit UC-004 to use it"
+git push
 ```
