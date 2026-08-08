@@ -7,6 +7,12 @@ export default function HomePage() {
       <p>
         <Link href="/login">Đăng nhập (UC-001) →</Link>
       </p>
+      <p>
+        <Link href="/attendance">Chấm công (UC-002) →</Link>
+      </p>
+      <p>
+        <Link href="/leave-requests/new">Xin nghỉ phép (UC-004) →</Link>
+      </p>
     </main>
   );
 }

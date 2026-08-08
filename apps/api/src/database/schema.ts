@@ -54,3 +54,24 @@ export const leaveRequest = pgTable(
     ),
   ],
 );
+
+// Entity model: specs/entities/entity-model.md#attendance
+// UC-002 scope: check-in/check-out only. Exactly 1 row per employee per day.
+export const attendance = pgTable(
+  'attendance',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    employeeId: integer('employee_id')
+      .notNull()
+      .references(() => employee.id),
+    // string mode, same reasoning as leaveRequest's date columns.
+    date: date('date', { mode: 'string' }).notNull(),
+    checkInAt: timestamp('check_in_at', { withTimezone: true }),
+    checkOutAt: timestamp('check_out_at', { withTimezone: true }),
+    source: text().notNull().default('web'),
+  },
+  (table) => [
+    uniqueIndex('idx_attendance_employee_date').on(table.employeeId, table.date),
+    check('attendance_source_check', sql`${table.source} in ('web','manual_by_hr')`),
+  ],
+);

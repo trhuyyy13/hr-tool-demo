@@ -24,3 +24,13 @@ export function countBusinessDays(fromDate: string, toDate: string): number {
   }
   return count;
 }
+
+/** 'HH:mm' in Vietnam time — used in UC-002's E1/E3 rejection messages. */
+export function formatTimeVN(d: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: VN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
