@@ -34,3 +34,34 @@ export function formatTimeVN(d: Date): string {
     hour12: false,
   }).format(d);
 }
+
+/** 'YYYY-MM-01'..last day of that month, both inclusive — UC-006's report window. */
+export function monthDateRange(year: number, month: number): { start: string; end: string } {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
+}
+
+/** UC-006 E2 — reports can't be run for a month later than the current one. */
+export function isFutureMonth(year: number, month: number): boolean {
+  const [todayYear, todayMonth] = todayDateString().split('-').map(Number);
+  return year > todayYear! || (year === todayYear && month > todayMonth!);
+}
+
+/**
+ * Minutes a Vietnam-local check-in falls after 09:00 — UC-006's late_minutes
+ * business rule (demo cutoff, not configurable per employee/department yet).
+ */
+export function lateMinutesAfterNine(checkInAt: Date): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: VN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(checkInAt);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  const lateMinutes = hour * 60 + minute - 9 * 60;
+  return lateMinutes > 0 ? lateMinutes : 0;
+}

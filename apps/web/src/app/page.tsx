@@ -16,6 +16,9 @@ export default function HomePage() {
       <p>
         <Link href="/manager/approvals">Duyệt nghỉ phép (UC-005) →</Link>
       </p>
+      <p>
+        <Link href="/reports/monthly">Báo cáo tháng (UC-006) →</Link>
+      </p>
     </main>
   );
 }
