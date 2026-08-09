@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { RoleBadge, type EmployeeRole } from '../../components/RoleBadge';
 
@@ -108,6 +109,9 @@ export default function ManagerApprovalsPage() {
 
   return (
     <main className="page">
+      <Link href="/" className="back-link">
+        ← Trang chủ
+      </Link>
       <div className="page-header">
         <div>
           <h1 className="page-title">Yêu cầu nghỉ phép chờ duyệt</h1>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { RoleBadge, type EmployeeRole } from '../../components/RoleBadge';
 
@@ -103,6 +104,9 @@ export default function NewLeaveRequestPage() {
 
   return (
     <main className="page">
+      <Link href="/" className="back-link">
+        ← Trang chủ
+      </Link>
       <div className="page-header">
         <div>
           <h1 className="page-title">Xin nghỉ phép</h1>

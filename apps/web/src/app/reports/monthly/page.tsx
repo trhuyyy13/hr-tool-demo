@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 const now = new Date();
@@ -61,6 +62,9 @@ export default function MonthlyReportPage() {
 
   return (
     <main className="page">
+      <Link href="/" className="back-link">
+        ← Trang chủ
+      </Link>
       <div className="page-header">
         <div>
           <h1 className="page-title">Báo cáo tháng</h1>

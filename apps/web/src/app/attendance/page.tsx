@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 type AttendanceStatus = {
@@ -73,6 +74,9 @@ export default function AttendancePage() {
 
   return (
     <main className="page">
+      <Link href="/" className="back-link">
+        ← Trang chủ
+      </Link>
       <div className="page-header">
         <div>
           <h1 className="page-title">Chấm công</h1>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RoleBadge, type EmployeeRole } from '../components/RoleBadge';
 
@@ -84,6 +85,9 @@ function LoginForm() {
 
   return (
     <main className="page">
+      <Link href="/" className="back-link">
+        ← Trang chủ
+      </Link>
       <div className="page-header">
         <div>
           <h1 className="page-title">HR Tool</h1>
