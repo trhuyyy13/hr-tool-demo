@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 type SessionEmployee = {
   id: number;
@@ -21,6 +21,8 @@ const LEAVE_TYPE_LABEL: Record<LeaveType, string> = {
 
 export default function NewLeaveRequestPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const [me, setMe] = useState<SessionEmployee | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
 
@@ -38,14 +40,14 @@ export default function NewLeaveRequestPage() {
     fetch('/api/auth/me')
       .then(async (res) => {
         if (!res.ok) {
-          router.replace('/login');
+          router.replace(loginUrl);
           return;
         }
         setMe(await res.json());
         setCheckingSession(false);
       })
-      .catch(() => router.replace('/login'));
-  }, [router]);
+      .catch(() => router.replace(loginUrl));
+  }, [router, loginUrl]);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -69,7 +71,7 @@ export default function NewLeaveRequestPage() {
       });
 
       if (res.status === 401) {
-        router.replace('/login');
+        router.replace(loginUrl);
         return;
       }
 

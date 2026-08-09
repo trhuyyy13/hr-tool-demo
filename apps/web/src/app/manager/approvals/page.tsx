@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 type PendingLeaveRequest = {
   id: number;
@@ -22,6 +22,8 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function ManagerApprovalsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const [checkingSession, setCheckingSession] = useState(true);
   const [items, setItems] = useState<PendingLeaveRequest[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -32,24 +34,24 @@ export default function ManagerApprovalsPage() {
   const loadPending = useCallback(async () => {
     const res = await fetch('/api/leave-requests/pending');
     if (res.status === 401) {
-      router.replace('/login');
+      router.replace(loginUrl);
       return;
     }
     setItems(await res.json());
-  }, [router]);
+  }, [router, loginUrl]);
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then(async (res) => {
         if (!res.ok) {
-          router.replace('/login');
+          router.replace(loginUrl);
           return;
         }
         setCheckingSession(false);
         await loadPending();
       })
-      .catch(() => router.replace('/login'));
-  }, [router, loadPending]);
+      .catch(() => router.replace(loginUrl));
+  }, [router, loginUrl, loadPending]);
 
   async function handleApprove(id: number) {
     setBusyId(id);

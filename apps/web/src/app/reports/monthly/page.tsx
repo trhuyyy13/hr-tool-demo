@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const now = new Date();
 
 export default function MonthlyReportPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const [checkingSession, setCheckingSession] = useState(true);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -17,13 +19,13 @@ export default function MonthlyReportPage() {
     fetch('/api/auth/me')
       .then((res) => {
         if (!res.ok) {
-          router.replace('/login');
+          router.replace(loginUrl);
           return;
         }
         setCheckingSession(false);
       })
-      .catch(() => router.replace('/login'));
-  }, [router]);
+      .catch(() => router.replace(loginUrl));
+  }, [router, loginUrl]);
 
   async function handleExport() {
     setBusy(true);
@@ -31,7 +33,7 @@ export default function MonthlyReportPage() {
     try {
       const res = await fetch(`/api/reports/monthly?year=${year}&month=${month}`);
       if (res.status === 401) {
-        router.replace('/login');
+        router.replace(loginUrl);
         return;
       }
       if (!res.ok) {

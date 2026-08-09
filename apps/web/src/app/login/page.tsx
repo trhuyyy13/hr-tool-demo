@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Employee = {
   id: number;
@@ -12,7 +12,20 @@ type Employee = {
 };
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Remembers which page sent the user here (e.g. /login?next=/attendance),
+  // so login always returns them where they meant to go instead of always
+  // dumping them onto /leave-requests/new.
+  const next = searchParams.get('next') || '/leave-requests/new';
   const [checkingSession, setCheckingSession] = useState(true);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
@@ -23,13 +36,13 @@ export default function LoginPage() {
     fetch('/api/auth/me')
       .then((res) => {
         if (res.ok) {
-          router.replace('/leave-requests/new');
+          router.replace(next);
           return;
         }
         setCheckingSession(false);
       })
       .catch(() => setCheckingSession(false));
-  }, [router]);
+  }, [router, next]);
 
   useEffect(() => {
     if (checkingSession) return;
@@ -53,7 +66,7 @@ export default function LoginPage() {
         setErrorMessage(body.message ?? 'Đăng nhập thất bại');
         return;
       }
-      router.replace('/leave-requests/new');
+      router.replace(next);
     } catch {
       setErrorMessage('Không kết nối được tới server');
     } finally {

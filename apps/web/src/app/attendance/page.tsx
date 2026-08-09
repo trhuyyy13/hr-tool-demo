@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 type AttendanceStatus = {
   date: string;
@@ -15,6 +15,8 @@ function formatTime(iso: string): string {
 
 export default function AttendancePage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const [checkingSession, setCheckingSession] = useState(true);
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,25 +25,25 @@ export default function AttendancePage() {
   const loadStatus = useCallback(async () => {
     const res = await fetch('/api/attendance/today');
     if (res.status === 401) {
-      router.replace('/login');
+      router.replace(loginUrl);
       return;
     }
     setStatus(await res.json());
-  }, [router]);
+  }, [router, loginUrl]);
 
   // UC-001 E4/AC-6: no valid session -> back to /login instead of showing the page.
   useEffect(() => {
     fetch('/api/auth/me')
       .then(async (res) => {
         if (!res.ok) {
-          router.replace('/login');
+          router.replace(loginUrl);
           return;
         }
         setCheckingSession(false);
         await loadStatus();
       })
-      .catch(() => router.replace('/login'));
-  }, [router, loadStatus]);
+      .catch(() => router.replace(loginUrl));
+  }, [router, loginUrl, loadStatus]);
 
   async function handleAction(action: 'check-in' | 'check-out') {
     setBusy(true);
@@ -49,7 +51,7 @@ export default function AttendancePage() {
     try {
       const res = await fetch(`/api/attendance/${action}`, { method: 'POST' });
       if (res.status === 401) {
-        router.replace('/login');
+        router.replace(loginUrl);
         return;
       }
       const body = await res.json();
