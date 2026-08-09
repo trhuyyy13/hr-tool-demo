@@ -316,21 +316,41 @@ Verify: 37/37 unit test pass, và qua HTTP thật — Minh (không có manager)
 nộp đơn, Hà (HR Director) duyệt được, balance trừ đúng 10→7, người khác
 vẫn bị 403.
 
-### Ngày 5 kiểu case study gốc — dùng thử UI thật, không chỉ curl
+## Day 05 — deploy thử và vòng phản hồi
 
 Case study gốc dành hẳn Ngày 5 để deploy staging cho chị Hà và nhân viên
-dùng thử — repo demo này chưa có staging thật, nên tự đóng vai người dùng:
-chạy API + Web thật (build production của `apps/web` dính bug prerender
-riêng của Next 15.5.x không liên quan tới code, né bằng `next dev` chạy
-trong container sạch — không qua virtiofs nên không bị hang), rồi bấm tay
-qua cả 5 luồng UC trên trình duyệt thật.
+dùng thử, sửa vài bug/UX từ phản hồi thật, rồi mới deploy production. Repo
+demo này chưa có staging thật, nên tự đóng vai người dùng trước khi đưa
+cho stakeholder dùng thử.
 
-Phát hiện ngay 1 bug thật mà mọi lượt test bằng `curl` trước giờ đều bỏ
-lọt: `GET /api/employees` (danh sách nhân viên cho trang login picker)
-thiếu field `email` — nút "Đăng nhập bằng Google" gọi
+### 1. Chạy thật API + Web, không chỉ curl
+
+Build production của `apps/web` dính bug prerender riêng của Next 15.5.x
+("`<Html>` should not be imported outside of `pages/_document`" khi
+prerender `/404`, không liên quan code) — né bằng `next dev` chạy trong
+container sạch (source lấy qua `git archive`, không đụng virtiofs nên
+không bị hang):
+
+```bash
+git archive --format=tar HEAD -o src.tar
+docker run -d -p 13000:3000 -p 13001:3001 \
+  -v "$(pwd)/src.tar":/src.tar:ro node:22-slim bash -c '
+    apt-get update -qq && apt-get install -y -qq curl procps
+    tar -xf /src.tar -C /work && cd /work && npm ci
+    cd apps/api && npx drizzle-kit migrate && npm run db:seed && npm run build
+    node dist/main.js &
+    cd ../web && npx next dev -p 3000
+  '
+```
+
+### 2. Tự dùng thử — bắt được 1 bug thật
+
+Bấm tay qua cả 5 luồng UC trên trình duyệt thật, không chỉ `curl`. Phát
+hiện ngay: `GET /api/employees` (danh sách nhân viên cho trang login
+picker) thiếu field `email` — nút "Đăng nhập bằng Google" gọi
 `handleLogin(undefined)`, mọi lần đăng nhập qua UI thật đều lỗi "email
-must be an email". Lý do curl/unit test không bắt được: mọi test trước
-giờ đều hardcode sẵn email thật (`lan.tran@company.com`...) thay vì đọc
+must be an email". Lý do `curl`/unit test trước giờ không bắt được: mọi
+test đều hardcode sẵn email thật (`lan.tran@company.com`...) thay vì đọc
 từ chính endpoint này.
 
 ```bash
@@ -339,4 +359,33 @@ git push
 ```
 
 Sau khi vá, đăng nhập + cả 5 luồng (chấm công, xin nghỉ, duyệt, báo cáo)
-đều chạy đúng trên UI thật. 38/38 unit test pass.
+đều chạy đúng trên UI thật. **38/38 unit test pass.**
+
+### 3. Đưa link cho người dùng thử thật
+
+Container vẫn chạy nền ở `http://localhost:13000` — đưa thẳng link đó,
+kèm hướng dẫn: đăng nhập bằng picker demo (chưa nối Google OAuth thật),
+dùng **Nguyễn Văn Minh** hoặc **Phạm Thị Hà** để test UC-005 (`/manager/approvals`).
+Đây là container tạm cho việc dùng thử tại chỗ, không phải deploy public —
+muốn có link chia sẻ được cho người khác (Vercel hoặc nền tảng khác) là
+một bước riêng, cần quyết định nền tảng trước.
+
+### 4. Phản hồi thật từ người dùng thử — bug thứ hai
+
+Đúng như case study gốc mô tả ("chị Hà và nhân viên dùng thử → sửa vài
+bug/UX"): người dùng thật bấm link ở bước 3, báo lại "bấm UC nào cũng ra
+Xin nghỉ phép". Nguyên nhân: trang login hard-code
+`router.replace('/leave-requests/new')` sau khi đăng nhập, bỏ qua việc
+người dùng ban đầu định vào UC nào.
+
+```bash
+git commit -m "fix(UC-001): login always dumped users onto /leave-requests/new"
+git push
+```
+
+Sửa bằng cách mỗi trang cần login redirect sang `/login?next=<path của
+chính nó>` thay vì `/login` trơn; trang login đọc `next` rồi quay lại
+đúng chỗ sau khi đăng nhập (mặc định `/leave-requests/new` nếu vào thẳng
+`/login`, giữ tương thích ngược). Type-check sạch, verify lại trên UI
+thật: bấm "Chấm công" → login → vào đúng `/attendance`, không còn lạc
+sang "Xin nghỉ phép" nữa.
