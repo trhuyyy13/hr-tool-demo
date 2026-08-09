@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { countBusinessDays, todayDateString } from '../common/date.util.js';
+import { HR_DIRECTOR_EMAIL } from '../common/hr-director.js';
 import { EmployeesRepository } from '../employees/employees.repository.js';
 import { MailService } from '../mail/mail.service.js';
 import type { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
@@ -9,10 +10,6 @@ import type { RejectLeaveRequestDto } from './dto/reject-leave-request.dto.js';
 import { LeaveRequestsRepository, type DecideResult } from './leave-requests.repository.js';
 
 const NOT_PENDING_MESSAGE = 'Yêu cầu không tồn tại hoặc đã được xử lý';
-
-// UC-005 E5 — demo stand-in for a real "HR Director" role (no `role` column
-// on Employee yet, same gap UC-006 already lives with).
-const HR_DIRECTOR_EMAIL = process.env.HR_DIRECTOR_EMAIL ?? 'ha.pham@company.com';
 
 @Injectable()
 export class LeaveRequestsService {

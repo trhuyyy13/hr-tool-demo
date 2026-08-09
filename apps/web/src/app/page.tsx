@@ -1,24 +1,34 @@
 import Link from 'next/link';
 
+const LINKS = [
+  { href: '/login', title: 'Đăng nhập', sub: 'UC-001 · picker demo, không cần role riêng' },
+  { href: '/attendance', title: 'Chấm công', sub: 'UC-002 · mọi nhân viên' },
+  { href: '/leave-requests/new', title: 'Xin nghỉ phép', sub: 'UC-004 · mọi nhân viên' },
+  { href: '/manager/approvals', title: 'Duyệt nghỉ phép', sub: 'UC-005 · cần đăng nhập bằng Quản lý hoặc HR Director' },
+  { href: '/reports/monthly', title: 'Báo cáo tháng', sub: 'UC-006 · mọi nhân viên (demo, chưa phân quyền HR-only)' },
+];
+
 export default function HomePage() {
   return (
-    <main style={{ maxWidth: 480, margin: '2rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.4rem' }}>HR Tool (demo)</h1>
-      <p>
-        <Link href="/login">Đăng nhập (UC-001) →</Link>
-      </p>
-      <p>
-        <Link href="/attendance">Chấm công (UC-002) →</Link>
-      </p>
-      <p>
-        <Link href="/leave-requests/new">Xin nghỉ phép (UC-004) →</Link>
-      </p>
-      <p>
-        <Link href="/manager/approvals">Duyệt nghỉ phép (UC-005) →</Link>
-      </p>
-      <p>
-        <Link href="/reports/monthly">Báo cáo tháng (UC-006) →</Link>
-      </p>
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">HR Tool</h1>
+          <p className="page-subtitle">Demo chấm công &amp; nghỉ phép — 5 use case, spec-driven.</p>
+        </div>
+      </div>
+
+      <div className="card-list">
+        {LINKS.map((item) => (
+          <Link key={item.href} href={item.href} className="link-card">
+            <span>
+              <span className="link-card-title">{item.title}</span>
+              <span className="link-card-sub">{item.sub}</span>
+            </span>
+            <span className="link-card-arrow">→</span>
+          </Link>
+        ))}
+      </div>
     </main>
   );
 }

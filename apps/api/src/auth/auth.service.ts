@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { EmployeesRepository } from '../employees/employees.repository.js';
+import { computeRole } from '../employees/role.util.js';
 import type { SessionEmployeeResponse } from './dto/session-employee.response.js';
 import { signSession } from './session.util.js';
 
@@ -18,7 +19,8 @@ export class AuthService {
     if (!employee) {
       throw new UnauthorizedException(UNKNOWN_ACCOUNT_MESSAGE);
     }
-    return { token: signSession(employee.id), employee: this.toResponse(employee) };
+    const allEmployees = await this.employeesRepository.findAll();
+    return { token: signSession(employee.id), employee: this.toResponse(employee, allEmployees) };
   }
 
   async me(employeeId: number): Promise<SessionEmployeeResponse> {
@@ -26,22 +28,27 @@ export class AuthService {
     if (!employee) {
       throw new UnauthorizedException(UNKNOWN_ACCOUNT_MESSAGE);
     }
-    return this.toResponse(employee);
+    const allEmployees = await this.employeesRepository.findAll();
+    return this.toResponse(employee, allEmployees);
   }
 
-  private toResponse(employee: {
-    id: number;
-    fullName: string;
-    email: string;
-    department: string;
-    annualLeaveBalance: number;
-  }): SessionEmployeeResponse {
+  private toResponse(
+    employee: {
+      id: number;
+      fullName: string;
+      email: string;
+      department: string;
+      annualLeaveBalance: number;
+    },
+    allEmployees: Array<{ managerId: number | null }>,
+  ): SessionEmployeeResponse {
     return {
       id: employee.id,
       fullName: employee.fullName,
       email: employee.email,
       department: employee.department,
       annualLeaveBalance: employee.annualLeaveBalance,
+      role: computeRole(employee, allEmployees),
     };
   }
 }

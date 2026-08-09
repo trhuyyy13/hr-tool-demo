@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { RoleBadge, type EmployeeRole } from '../../components/RoleBadge';
 
 type SessionEmployee = {
   id: number;
@@ -9,6 +10,7 @@ type SessionEmployee = {
   email: string;
   department: string;
   annualLeaveBalance: number;
+  role: EmployeeRole;
 };
 
 type LeaveType = 'annual' | 'sick' | 'unpaid';
@@ -100,47 +102,36 @@ export default function NewLeaveRequestPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '2rem auto', padding: '0 1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.4rem', margin: 0 }}>Xin nghỉ phép</h1>
-        <button
-          type="button"
-          onClick={handleLogout}
-          style={{ background: 'none', border: 'none', color: '#666', fontSize: '0.8rem', cursor: 'pointer' }}
-        >
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Xin nghỉ phép</h1>
+          <div className="identity-row">
+            <span className="identity-name">{me.fullName}</span>
+            <RoleBadge role={me.role} />
+            <span className="identity-meta">
+              {me.department} · còn {me.annualLeaveBalance} ngày phép
+            </span>
+          </div>
+        </div>
+        <button type="button" className="btn-ghost" onClick={handleLogout}>
           Đăng xuất
         </button>
       </div>
 
-      <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '-1rem', marginBottom: '1.2rem' }}>
-        Đăng nhập với tư cách <strong>{me.fullName}</strong> ({me.department}) — còn{' '}
-        {me.annualLeaveBalance} ngày phép.
-      </p>
+      {success && <div className="banner banner-success">Đã gửi yêu cầu</div>}
+      {errorMessage && <div className="banner banner-danger">{errorMessage}</div>}
 
-      {success && (
-        <div style={{ background: '#e6f4ea', color: '#1e7a34', padding: '0.75rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          Đã gửi yêu cầu
-        </div>
-      )}
-      {errorMessage && (
-        <div style={{ background: '#fdecea', color: '#b3261e', padding: '0.75rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          {errorMessage}
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#fff', padding: '1rem', borderRadius: 8 }}
-      >
-        <div>
-          <label htmlFor="type" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
+      <form onSubmit={handleSubmit} className="card">
+        <div className="field">
+          <label htmlFor="type" className="field-label">
             Loại nghỉ
           </label>
           <select
             id="type"
+            className="input"
             value={type}
             onChange={(e) => setType(e.target.value as LeaveType)}
-            style={{ width: '100%', padding: '0.5rem' }}
           >
             {(Object.keys(LEAVE_TYPE_LABEL) as LeaveType[]).map((t) => (
               <option key={t} value={t}>
@@ -150,54 +141,50 @@ export default function NewLeaveRequestPage() {
           </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ flex: 1 }}>
-            <label htmlFor="fromDate" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="fromDate" className="field-label">
               Từ ngày
             </label>
             <input
               id="fromDate"
               type="date"
+              className="input"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               required
-              style={{ width: '100%', padding: '0.5rem' }}
             />
           </div>
-          <div style={{ flex: 1 }}>
-            <label htmlFor="toDate" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
+          <div className="field">
+            <label htmlFor="toDate" className="field-label">
               Đến ngày
             </label>
             <input
               id="toDate"
               type="date"
+              className="input"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               required
-              style={{ width: '100%', padding: '0.5rem' }}
             />
           </div>
         </div>
 
-        <div>
-          <label htmlFor="reason" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
+        <div className="field">
+          <label htmlFor="reason" className="field-label">
             Lý do
           </label>
           <textarea
             id="reason"
+            className="input"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
             rows={3}
-            style={{ width: '100%', padding: '0.5rem' }}
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{ padding: '0.6rem', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
-        >
+        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
           {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
         </button>
       </form>

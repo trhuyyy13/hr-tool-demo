@@ -72,48 +72,40 @@ export default function AttendancePage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: '3rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Chấm công</h1>
-
-      {errorMessage && (
-        <div
-          style={{
-            background: '#fdecea',
-            color: '#b3261e',
-            padding: '0.75rem 1rem',
-            borderRadius: 8,
-            marginBottom: '1rem',
-          }}
-        >
-          {errorMessage}
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Chấm công</h1>
         </div>
-      )}
+      </div>
 
-      <div style={{ padding: '1rem', background: '#fff', borderRadius: 8, marginBottom: '1.2rem' }}>
-        <p style={{ margin: 0, fontSize: '0.9rem', color: '#444' }}>
+      {errorMessage && <div className="banner banner-danger">{errorMessage}</div>}
+
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <p style={{ margin: 0, fontSize: '0.9rem' }}>
           Chấm công vào:{' '}
           <strong>{status.checkInAt ? formatTime(status.checkInAt) : 'chưa chấm công'}</strong>
         </p>
-        <p style={{ margin: '.4rem 0 0', fontSize: '0.9rem', color: '#444' }}>
+        <p style={{ margin: '.5rem 0 0', fontSize: '0.9rem' }}>
           Chấm công ra:{' '}
           <strong>{status.checkOutAt ? formatTime(status.checkOutAt) : 'chưa chấm công'}</strong>
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: '.8rem' }}>
+      <div className="btn-row">
         <button
           type="button"
+          className="btn btn-primary btn-block"
           disabled={busy || !!status.checkInAt}
           onClick={() => handleAction('check-in')}
-          style={{ flex: 1, padding: '.7rem', borderRadius: 8, border: '1px solid #dadce0', cursor: 'pointer' }}
         >
           Chấm công vào
         </button>
         <button
           type="button"
+          className="btn btn-block"
           disabled={busy || !status.checkInAt || !!status.checkOutAt}
           onClick={() => handleAction('check-out')}
-          style={{ flex: 1, padding: '.7rem', borderRadius: 8, border: '1px solid #dadce0', cursor: 'pointer' }}
         >
           Chấm công ra
         </button>

@@ -1,3 +1,5 @@
+import type { EmployeeRole } from '../role.util.js';
+
 export type EmployeeResponse = {
   id: number;
   fullName: string;
@@ -5,4 +7,5 @@ export type EmployeeResponse = {
   department: string;
   managerId: number | null;
   annualLeaveBalance: number;
+  role: EmployeeRole;
 };

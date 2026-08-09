@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { RoleBadge, type EmployeeRole } from '../../components/RoleBadge';
+
+type SessionEmployee = {
+  id: number;
+  fullName: string;
+  role: EmployeeRole;
+};
 
 type PendingLeaveRequest = {
   id: number;
@@ -25,6 +32,7 @@ export default function ManagerApprovalsPage() {
   const pathname = usePathname();
   const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const [checkingSession, setCheckingSession] = useState(true);
+  const [me, setMe] = useState<SessionEmployee | null>(null);
   const [items, setItems] = useState<PendingLeaveRequest[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -47,6 +55,7 @@ export default function ManagerApprovalsPage() {
           router.replace(loginUrl);
           return;
         }
+        setMe(await res.json());
         setCheckingSession(false);
         await loadPending();
       })
@@ -91,55 +100,88 @@ export default function ManagerApprovalsPage() {
     }
   }
 
-  if (checkingSession) {
+  if (checkingSession || !me) {
     return null;
   }
 
-  return (
-    <main style={{ maxWidth: 560, margin: '3rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Yêu cầu nghỉ phép chờ duyệt</h1>
+  const canApproveAnything = me.role === 'manager' || me.role === 'hr_director';
 
-      {errorMessage && (
-        <div
-          style={{ background: '#fdecea', color: '#b3261e', padding: '0.75rem 1rem', borderRadius: 8, marginBottom: '1rem' }}
-        >
-          {errorMessage}
+  return (
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Yêu cầu nghỉ phép chờ duyệt</h1>
+          <div className="identity-row">
+            <span className="identity-name">{me.fullName}</span>
+            <RoleBadge role={me.role} />
+          </div>
+        </div>
+      </div>
+
+      {!canApproveAnything && (
+        <div className="banner banner-warning">
+          Tài khoản này có vai trò <strong>Nhân viên</strong>, không phải Quản
+          lý hay HR Director — sẽ không có yêu cầu nào để duyệt, và bấm "Duyệt"
+          trên đơn của người khác sẽ luôn bị từ chối (403). Đăng xuất và chọn
+          một tài khoản có badge <strong>Quản lý</strong> hoặc{' '}
+          <strong>HR Director</strong> ở trang đăng nhập để test UC-005.
         </div>
       )}
 
-      {items.length === 0 && <p style={{ color: '#666' }}>Không có yêu cầu nào đang chờ duyệt.</p>}
+      {errorMessage && <div className="banner banner-danger">{errorMessage}</div>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '.8rem' }}>
+      {items.length === 0 && canApproveAnything && (
+        <div className="banner banner-neutral">Không có yêu cầu nào đang chờ duyệt.</div>
+      )}
+
+      <div className="card-list">
         {items.map((item) => (
-          <div key={item.id} style={{ padding: '1rem', background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0' }}>
+          <div key={item.id} className="card">
             <p style={{ margin: 0, fontWeight: 600 }}>{item.employeeName}</p>
-            <p style={{ margin: '.3rem 0', fontSize: '0.85rem', color: '#555' }}>
+            <p style={{ margin: '.35rem 0', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
               {TYPE_LABEL[item.type] ?? item.type} · {item.fromDate} → {item.toDate}
             </p>
-            <p style={{ margin: '.3rem 0', fontSize: '0.85rem', color: '#555' }}>Lý do: {item.reason}</p>
+            <p style={{ margin: '.35rem 0', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+              Lý do: {item.reason}
+            </p>
 
             {rejectingId === item.id ? (
-              <div style={{ marginTop: '.6rem', display: 'flex', gap: '.5rem' }}>
+              <div className="btn-row" style={{ marginTop: '.7rem' }}>
                 <input
                   type="text"
+                  className="input"
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Lý do từ chối"
-                  style={{ flex: 1, padding: '.4rem .6rem', borderRadius: 6, border: '1px solid #dadce0' }}
                 />
-                <button type="button" disabled={busyId === item.id} onClick={() => handleReject(item.id)}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busyId === item.id}
+                  onClick={() => handleReject(item.id)}
+                >
                   Xác nhận từ chối
                 </button>
-                <button type="button" onClick={() => setRejectingId(null)}>
+                <button type="button" className="btn-ghost" onClick={() => setRejectingId(null)}>
                   Huỷ
                 </button>
               </div>
             ) : (
-              <div style={{ marginTop: '.6rem', display: 'flex', gap: '.6rem' }}>
-                <button type="button" disabled={busyId === item.id} onClick={() => handleApprove(item.id)}>
+              <div className="btn-row" style={{ marginTop: '.7rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busyId === item.id}
+                  onClick={() => handleApprove(item.id)}
+                >
                   Duyệt
                 </button>
-                <button type="button" disabled={busyId === item.id} onClick={() => setRejectingId(item.id)}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busyId === item.id}
+                  onClick={() => setRejectingId(item.id)}
+                >
                   Từ chối
                 </button>
               </div>

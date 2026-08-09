@@ -60,34 +60,53 @@ export default function MonthlyReportPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: '3rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Báo cáo tháng</h1>
-
-      {errorMessage && (
-        <div style={{ background: '#fdecea', color: '#b3261e', padding: '0.75rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          {errorMessage}
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Báo cáo tháng</h1>
+          <p className="page-subtitle">Demo: mở cho mọi nhân viên đã đăng nhập, chưa giới hạn HR-only.</p>
         </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '.6rem', marginBottom: '1.2rem' }}>
-        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ padding: '.5rem' }}>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-            <option key={m} value={m}>
-              Tháng {m}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          style={{ width: '6rem', padding: '.5rem' }}
-        />
       </div>
 
-      <button type="button" disabled={busy} onClick={handleExport} style={{ padding: '.7rem 1.2rem', borderRadius: 8, border: '1px solid #dadce0', cursor: 'pointer' }}>
-        {busy ? 'Đang xuất…' : 'Xuất CSV'}
-      </button>
+      {errorMessage && <div className="banner banner-danger">{errorMessage}</div>}
+
+      <div className="card">
+        <div className="field-row" style={{ marginBottom: '1rem' }}>
+          <div className="field">
+            <label className="field-label" htmlFor="month">
+              Tháng
+            </label>
+            <select
+              id="month"
+              className="input"
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Tháng {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="year">
+              Năm
+            </label>
+            <input
+              id="year"
+              type="number"
+              className="input"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={handleExport}>
+          {busy ? 'Đang xuất…' : 'Xuất CSV'}
+        </button>
+      </div>
     </main>
   );
 }

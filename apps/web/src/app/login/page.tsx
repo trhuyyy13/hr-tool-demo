@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { RoleBadge, type EmployeeRole } from '../components/RoleBadge';
 
 type Employee = {
   id: number;
@@ -9,6 +10,7 @@ type Employee = {
   email: string;
   department: string;
   annualLeaveBalance: number;
+  role: EmployeeRole;
 };
 
 export default function LoginPage() {
@@ -78,67 +80,50 @@ function LoginForm() {
     return null;
   }
 
-  return (
-    <main style={{ maxWidth: 420, margin: '3rem auto', padding: '0 1rem' }}>
-      <h1 style={{ fontSize: '1.3rem', marginBottom: '.4rem' }}>HR Tool</h1>
-      <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-        Đăng nhập bằng tài khoản Google công ty.
-      </p>
+  const wantsApprovals = next === '/manager/approvals';
 
-      <p
-        style={{
-          fontSize: '0.75rem',
-          color: '#9a6b00',
-          background: '#fff8e1',
-          padding: '.6rem .8rem',
-          borderRadius: 8,
-          marginBottom: '1.2rem',
-        }}
-      >
+  return (
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">HR Tool</h1>
+          <p className="page-subtitle">Đăng nhập bằng tài khoản Google công ty.</p>
+        </div>
+      </div>
+
+      <div className="banner banner-warning">
         Demo: chưa nối Google OAuth thật — chọn một tài khoản bên dưới để mô
         phỏng bước Google xác thực xong trả email về cho hệ thống.
-      </p>
+      </div>
 
-      {errorMessage && (
-        <div
-          style={{
-            background: '#fdecea',
-            color: '#b3261e',
-            padding: '0.75rem 1rem',
-            borderRadius: 8,
-            marginBottom: '1rem',
-          }}
-        >
-          {errorMessage}
+      {wantsApprovals && (
+        <div className="banner banner-neutral">
+          Trang duyệt nghỉ phép chỉ hoạt động cho <strong>Quản lý</strong> (đơn của
+          nhân viên báo cáo trực tiếp) hoặc <strong>HR Director</strong> (đơn của
+          người không có quản lý). Chọn một tài khoản có badge tương ứng bên
+          dưới.
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+      {errorMessage && <div className="banner banner-danger">{errorMessage}</div>}
+
+      <div className="card-list">
         {employees.map((emp) => (
           <button
             key={emp.id}
             type="button"
+            className="picker-row"
             onClick={() => handleLogin(emp.email)}
             disabled={loadingEmail !== null}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '.7rem 1rem',
-              background: '#fff',
-              border: '1px solid #dadce0',
-              borderRadius: 8,
-              cursor: loadingEmail ? 'default' : 'pointer',
-              fontSize: '0.88rem',
-              textAlign: 'left',
-            }}
           >
-            <span>
-              <strong>{emp.fullName}</strong>
-              <br />
-              <span style={{ color: '#666', fontSize: '0.78rem' }}>{emp.email}</span>
+            <span className="picker-identity">
+              <span className="picker-name-row">
+                <strong>{emp.fullName}</strong>
+                <RoleBadge role={emp.role} />
+              </span>
+              <span className="picker-email">{emp.email}</span>
             </span>
-            <span style={{ color: '#1a73e8', fontSize: '0.8rem' }}>
+            <span className="picker-action">
               {loadingEmail === emp.email ? 'Đang đăng nhập…' : 'Đăng nhập bằng Google →'}
             </span>
           </button>
