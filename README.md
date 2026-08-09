@@ -429,3 +429,22 @@ Verify: 45/45 unit test pass (thêm test cho `computeRole` ở cả
 sạch, và click-through thật: đăng nhập bằng Lan (Employee) vào
 `/manager/approvals` → thấy banner giải thích thay vì bấm Duyệt rồi ăn
 403 không rõ lý do; đăng nhập bằng Minh/Hà → duyệt bình thường.
+
+Đóng vòng lặp lại toàn bộ 5 luồng với vai trò đã hiện rõ: Lan nộp đơn
+xin nghỉ 2 ngày → Minh (Quản lý) duyệt → balance của Lan trừ đúng 8→6.
+Không có lỗi console mới ngoài warning hydration vô hại của extension.
+
+### 6. Phản hồi thứ tư — không có lối quay lại trang chủ
+
+Cả 6 trang (login, chấm công, xin nghỉ, duyệt đơn, báo cáo, và cả trang
+chủ) không có nút/link nào quay lại danh sách UC — chỉ có thể sửa URL
+tay. Thêm link `← Trang chủ` (`.back-link` trong `globals.css`) ở đầu
+mỗi trang trừ trang chủ.
+
+```bash
+git commit -m "fix(UI): add \"← Trang chủ\" back link to every page"
+git push
+```
+
+Verify: `tsc --noEmit` sạch, click-through cả 6 trang — mỗi trang đều
+có link, bấm vào quay đúng về `/`.

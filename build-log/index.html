@@ -332,7 +332,7 @@
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;09</strong></span>
       <span><strong>5</strong> ngày build log</span>
-      <span><strong>26</strong> commit</span>
+      <span><strong>28</strong> commit</span>
       <span><strong>5/5</strong> use case implement xong</span>
     </div>
   </section>
@@ -1218,7 +1218,39 @@ git push">COPY</button>
         <code>tsc --noEmit</code> sạch, click-through thật: đăng nhập bằng
         Lan (Employee) vào <code>/manager/approvals</code> → thấy banner
         giải thích thay vì bấm Duyệt rồi ăn 403 không rõ lý do; đăng nhập
-        bằng Minh/Hà → duyệt bình thường.</p>
+        bằng Minh/Hà → duyệt bình thường. Đóng vòng lặp lại toàn bộ luồng
+        với vai trò đã hiện rõ: Lan nộp đơn nghỉ 2 ngày → Minh (Quản lý)
+        duyệt → balance của Lan trừ đúng 8→6, không lỗi console nào mới.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-mark">6</div>
+      <div>
+        <h3>Phản hồi thứ tư — không có lối quay lại trang chủ</h3>
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p>Cả 6 trang (login, chấm công, xin nghỉ, duyệt đơn, báo cáo)
+            không có nút/link nào quay lại danh sách UC — chỉ có thể sửa
+            URL bằng tay.</p>
+          </div>
+        </div>
+        <p style="margin-top:.8rem;">Thêm link <code>← Trang chủ</code>
+        (<code>.back-link</code> trong <code>globals.css</code>) ở đầu
+        mỗi trang trừ trang chủ.</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;fix(UI): add &#8203;\&quot;← Trang chủ\&quot; back link to every page&quot;
+git push">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "fix(UI): add \"← Trang chủ\" back link to every page"</code></pre>
+        </div>
+        <p style="margin-top:.8rem;"><code>tsc --noEmit</code> sạch,
+        click-through cả 6 trang — mỗi trang đều có link, bấm vào quay
+        đúng về <code>/</code>.</p>
       </div>
     </div>
   </section>
@@ -1323,6 +1355,11 @@ git push">COPY</button>
           <td class="hash">4ff9dd3</td>
           <td class="msg">feat(UI): computed role badges + visual redesign to fix "can't approve" confusion</td>
         </tr>
+        <tr>
+          <td></td>
+          <td class="hash">0853683</td>
+          <td class="msg">fix(UI): add "← Trang chủ" back link to every page</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1332,9 +1369,9 @@ git push">COPY</button>
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
         5/5 use case từ BR-001 (Ngày 01) nay đều chạy được trên Postgres
-        thật, đã tự dùng thử qua UI thật — 3 gap thật vá dọc đường
+        thật, đã tự dùng thử qua UI thật — 4 gap thật vá dọc đường
         (UC-005 HR Director, UC-001 login picker, vai trò vô hình ở UI
-        duyệt đơn).
+        duyệt đơn, thiếu lối quay lại trang chủ).
       </p>
     </div>
   </footer>
