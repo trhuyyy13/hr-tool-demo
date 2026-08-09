@@ -332,7 +332,7 @@
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;09</strong></span>
       <span><strong>5</strong> ngày build log</span>
-      <span><strong>25</strong> commit</span>
+      <span><strong>26</strong> commit</span>
       <span><strong>5/5</strong> use case implement xong</span>
     </div>
   </section>
@@ -1169,6 +1169,58 @@ git push">COPY</button>
         còn lạc sang "Xin nghỉ phép" nữa.</p>
       </div>
     </div>
+
+    <div class="step">
+      <div class="step-mark">5</div>
+      <div>
+        <h3>Phản hồi thứ ba — "không duyệt được" là do vai trò vô hình</h3>
+        <p>Người dùng thử tiếp tục báo "K duyệt được" ở
+        <code>/manager/approvals</code>. Tái hiện qua HTTP thật: đăng nhập
+        bằng Minh (quản lý) thì duyệt thành công (201) — backend không
+        sai, UI chỉ không hề cho biết ai được phép duyệt, nên tài khoản
+        Employee bấm vào thấy danh sách rỗng hoặc bị 403 mà không hiểu vì
+        sao.</p>
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p>Không có cách nào để biết trước, chỉ nhìn UI, ai là Quản lý
+            hay HR Director — badge vai trò chưa tồn tại ở đâu cả.</p>
+          </div>
+        </div>
+        <div class="callout decision">
+          <span class="tag">QUYẾT ĐỊNH</span>
+          <div>
+            <p>Không thêm cột <code>role</code> mới vào <code>Employee</code>
+            — có nguy cơ lệch khỏi logic phân quyền UC-005 vốn đã dựa
+            thẳng vào <code>manager_id</code> có sẵn. Suy ra vai trò tại
+            chỗ bằng <code>computeRole()</code> (manager = có ai đó trỏ
+            <code>manager_id</code> về mình; hr_director = trùng
+            <code>HR_DIRECTOR_EMAIL</code>), gắn vào response của
+            <code>GET /api/employees</code> và <code>/api/auth/{login,me}</code>.</p>
+          </div>
+        </div>
+        <p style="margin-top:.8rem;">Trên UI: picker đăng nhập gắn badge
+        vai trò cho từng nhân viên; trang duyệt đơn hiện badge của người
+        đang đăng nhập và, nếu không phải Quản lý/HR Director, hiện banner
+        giải thích rõ thay vì để danh sách trống khó hiểu. Nhân tiện thay
+        style rời rạc từng trang bằng một design system dùng chung
+        (<code>globals.css</code>).</p>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;feat(UI): computed role badges + visual redesign to fix &#8203;\&quot;can't approve\&quot; confusion&quot;
+git push">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "feat(UI): computed role badges + visual redesign..."</code><code class="l">git push</code></pre>
+        </div>
+        <p style="margin-top:.8rem;"><strong>45/45 unit test pass</strong>,
+        <code>tsc --noEmit</code> sạch, click-through thật: đăng nhập bằng
+        Lan (Employee) vào <code>/manager/approvals</code> → thấy banner
+        giải thích thay vì bấm Duyệt rồi ăn 403 không rõ lý do; đăng nhập
+        bằng Minh/Hà → duyệt bình thường.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ STRUCTURE ============ -->
@@ -1266,6 +1318,11 @@ git push">COPY</button>
           <td class="hash">d3da587</td>
           <td class="msg">fix(UC-001): login always dumped users onto /leave-requests/new</td>
         </tr>
+        <tr>
+          <td></td>
+          <td class="hash">4ff9dd3</td>
+          <td class="msg">feat(UI): computed role badges + visual redesign to fix "can't approve" confusion</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1275,8 +1332,9 @@ git push">COPY</button>
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
         5/5 use case từ BR-001 (Ngày 01) nay đều chạy được trên Postgres
-        thật, đã tự dùng thử qua UI thật — 2 gap thật vá dọc đường
-        (UC-005 HR Director, UC-001 login picker).
+        thật, đã tự dùng thử qua UI thật — 3 gap thật vá dọc đường
+        (UC-005 HR Director, UC-001 login picker, vai trò vô hình ở UI
+        duyệt đơn).
       </p>
     </div>
   </footer>

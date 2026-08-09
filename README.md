@@ -389,3 +389,43 @@ chính nó>` thay vì `/login` trơn; trang login đọc `next` rồi quay lại
 `/login`, giữ tương thích ngược). Type-check sạch, verify lại trên UI
 thật: bấm "Chấm công" → login → vào đúng `/attendance`, không còn lạc
 sang "Xin nghỉ phép" nữa.
+
+### 5. Phản hồi thứ ba — "không duyệt được" là do vai trò vô hình
+
+Người dùng thử tiếp tục báo "K duyệt được" khi bấm Duyệt ở
+`/manager/approvals`. Tái hiện qua HTTP thật: đăng nhập bằng Minh (quản
+lý) thì duyệt thành công (201); vậy backend không sai — vấn đề là UI
+không hề cho biết ai được phép duyệt, nên tài khoản Employee bấm vào
+thấy danh sách rỗng hoặc bị 403 mà không hiểu vì sao.
+
+Repo chưa có cột `role` trên `Employee`, và cố tình không thêm — thêm
+cột mới có nguy cơ lệch khỏi logic phân quyền UC-005 vốn đã dựa thẳng
+vào quan hệ `manager_id` có sẵn. Thay vào đó suy ra vai trò tại chỗ:
+
+```ts
+// apps/api/src/employees/role.util.ts
+function computeRole(employee, allEmployees) {
+  if (employee.email === HR_DIRECTOR_EMAIL) return 'hr_director';
+  return allEmployees.some((e) => e.managerId === employee.id) ? 'manager' : 'employee';
+}
+```
+
+`role` được thêm vào response của `GET /api/employees` và
+`/api/auth/{login,me}` — dùng đúng dữ liệu UC-005 đã tin tưởng, không
+tạo nguồn sự thật thứ hai. Trên UI: picker đăng nhập gắn badge vai trò
+cho từng nhân viên; trang duyệt đơn hiện badge của người đang đăng nhập
+và, nếu không phải Quản lý/HR Director, hiện banner giải thích rõ thay
+vì để danh sách trống khó hiểu. Nhân tiện thay toàn bộ style rời rạc
+từng trang bằng một design system dùng chung (`globals.css`: card,
+button, badge, banner, form field).
+
+```bash
+git commit -m "feat(UI): computed role badges + visual redesign to fix \"can't approve\" confusion"
+git push
+```
+
+Verify: 45/45 unit test pass (thêm test cho `computeRole` ở cả
+`employees.service.spec.ts` và `auth.service.spec.ts`), `tsc --noEmit`
+sạch, và click-through thật: đăng nhập bằng Lan (Employee) vào
+`/manager/approvals` → thấy banner giải thích thay vì bấm Duyệt rồi ăn
+403 không rõ lý do; đăng nhập bằng Minh/Hà → duyệt bình thường.
