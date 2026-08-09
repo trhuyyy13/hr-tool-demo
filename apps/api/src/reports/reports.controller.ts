@@ -38,7 +38,11 @@ export class ReportsController {
   ): Promise<void> {
     const year = Number(yearParam);
     const month = Number(monthParam);
-    if (!Number.isInteger(year)) {
+    // Bounded, not just "is a number": year=0 (or "" -> Number('') === 0)
+    // and negative years produce a malformed "0-08-01"-style date string
+    // that Postgres rejects with an uncaught 22008 error, leaking a raw
+    // 500 instead of this validation message.
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
       throw new BadRequestException('Năm không hợp lệ');
     }
 
