@@ -35,6 +35,10 @@ function makeDecideRepository(overrides: {
   };
 }
 
+function makeListRepository(rows: any[]) {
+  return { findPendingForManager: jest.fn(async () => rows) };
+}
+
 function makeEmployeesRepository(employeesById: Record<number, MockedEmployee>) {
   return {
     findById: jest.fn(async (id: number) => employeesById[id]),
@@ -380,5 +384,39 @@ describe('LeaveRequestsService — UC-005 acceptance criteria', () => {
       new ForbiddenException('Bạn không có quyền duyệt yêu cầu này'),
     );
     expect(repository.decide).not.toHaveBeenCalled();
+  });
+});
+
+describe('LeaveRequestsService — listPendingForManager', () => {
+  it('asks the repository for direct reports only when the caller is a regular manager', async () => {
+    const rows = [{ leave_request: PENDING_ANNUAL, employee: EMPLOYEE({ managerId: 1 }) }];
+    const repository = makeListRepository(rows);
+    const employeesRepository = makeEmployeesRepository({ 1: MANAGER });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    const result = await service.listPendingForManager(1);
+
+    expect(repository.findPendingForManager).toHaveBeenCalledWith(1, false);
+    expect(result).toHaveLength(1);
+  });
+
+  // Regression: the E5 HR Director fallback lets her decide() on
+  // manager-less employees' requests, but until this fix the pending list
+  // never asked the repository to include them — so AC-8 was unreachable
+  // from the UI even though the backend already permitted it.
+  it('E5: also includes manager-less employees pending requests for the HR Director', async () => {
+    const pendingNoManager = { ...PENDING_ANNUAL, employeeId: 1 };
+    const rows = [
+      { leave_request: pendingNoManager, employee: EMPLOYEE({ id: 1, managerId: null, fullName: 'Nguyễn Văn Minh' }) },
+    ];
+    const repository = makeListRepository(rows);
+    const employeesRepository = makeEmployeesRepository({ 10: HR_DIRECTOR });
+    const service = new LeaveRequestsService(repository as any, employeesRepository as any, makeMailService() as any);
+
+    const result = await service.listPendingForManager(HR_DIRECTOR.id);
+
+    expect(repository.findPendingForManager).toHaveBeenCalledWith(HR_DIRECTOR.id, true);
+    expect(result).toHaveLength(1);
+    expect(result[0].employeeName).toBe('Nguyễn Văn Minh');
   });
 });

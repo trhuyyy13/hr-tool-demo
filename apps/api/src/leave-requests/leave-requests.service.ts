@@ -81,9 +81,12 @@ export class LeaveRequestsService {
     return this.toResponse(row);
   }
 
-  // UC-005 Main Flow step 1 — requests from this manager's direct reports only.
+  // UC-005 Main Flow step 1 — this manager's direct reports, plus (E5) any
+  // manager-less employees when the caller is the HR Director fallback.
   async listPendingForManager(managerId: number): Promise<PendingLeaveRequestResponse[]> {
-    const rows = await this.repository.findPendingForManager(managerId);
+    const manager = await this.employeesRepository.findById(managerId);
+    const isHrDirector = manager?.email.toLowerCase() === HR_DIRECTOR_EMAIL.toLowerCase();
+    const rows = await this.repository.findPendingForManager(managerId, isHrDirector);
     return rows.map(({ leave_request, employee }) => ({
       ...this.toResponse(leave_request),
       employeeName: employee.fullName,

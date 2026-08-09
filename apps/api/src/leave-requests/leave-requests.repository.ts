@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { DRIZZLE, type DrizzleDb } from '../database/drizzle.provider.js';
 import { approvalLog, employee, leaveRequest } from '../database/schema.js';
 
@@ -75,12 +75,19 @@ export class LeaveRequestsRepository {
     return rows[0];
   }
 
-  async findPendingForManager(managerId: number) {
+  // E5: the HR Director fallback also decides for employees with no
+  // manager (`resolveApprover`), so her pending list must surface those
+  // requests too — not just direct reports — or AC-8 is undeckable from
+  // the UI even though `decide()` already permits it.
+  async findPendingForManager(managerId: number, isHrDirector: boolean) {
+    const requesterCondition = isHrDirector
+      ? or(eq(employee.managerId, managerId), isNull(employee.managerId))
+      : eq(employee.managerId, managerId);
     return this.db
       .select()
       .from(leaveRequest)
       .innerJoin(employee, eq(leaveRequest.employeeId, employee.id))
-      .where(and(eq(leaveRequest.status, 'pending'), eq(employee.managerId, managerId)));
+      .where(and(eq(leaveRequest.status, 'pending'), requesterCondition));
   }
 
   /**
