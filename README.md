@@ -448,3 +448,33 @@ git push
 
 Verify: `tsc --noEmit` sạch, click-through cả 6 trang — mỗi trang đều
 có link, bấm vào quay đúng về `/`.
+
+### 7. Test lại cẩn thận với vai trò đã rõ — lộ ra 1 bug thật ở UC-005
+
+Theo đúng yêu cầu "test lại cẩn thận": đăng nhập lần lượt từng vai trò
+thật (Employee, Manager, HR Director), đi hết cả 5 luồng, nộp đơn thật
+từ Minh (không có `manager_id`) rồi kiểm tra hàng chờ duyệt của Hà (HR
+Director).
+
+Đơn của Minh **không hiện** trong danh sách chờ duyệt của Hà, dù backend
+`decide()` vẫn cho Hà duyệt nếu biết đúng ID. Nguyên nhân:
+`listPendingForManager`/`findPendingForManager` (UC-005) chỉ query
+`employee.managerId = managerId` — fix E5 ở Ngày 04 (fallback HR
+Director) chỉ vá `decide()`, quên vá luôn API liệt kê danh sách chờ
+duyệt. Không unit test nào trong 45 test hiện có gọi tới hàm này, nên
+gap tồn tại xuyên suốt mà không bị bắt.
+
+```bash
+git commit -m "fix(UC-005): HR Director's pending list was missing manager-less requests"
+git push
+```
+
+Sửa bằng cách `listPendingForManager` kiểm tra người gọi có phải HR
+Director không, nếu đúng thì query thêm điều kiện
+`employee.managerId IS NULL`. Thêm 2 test mới gọi trực tiếp
+`listPendingForManager` (trước đó 0/45 test nào chạm tới hàm này).
+
+Verify: 44/44 unit test pass (thêm 2, không giảm test nào), và qua UI
+thật — Minh nộp đơn, đăng nhập lại bằng Hà → thấy cả đơn của Minh lẫn
+đơn của chính Hà trong hàng chờ, bấm Duyệt cho Minh → DB xác nhận
+`status=approved, approver_id=2` (Hà).
