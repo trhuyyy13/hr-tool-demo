@@ -507,3 +507,34 @@ rỗng, quá lớn, và input hợp lệ.
 Verify: 49/49 unit test pass, và qua HTTP thật — `year=0`/`year=-5`/
 `year=""` đều trả về đúng "Năm không hợp lệ" (400) thay vì 500,
 `year=2026` vẫn xuất CSV bình thường.
+
+### 9. Thử lại lần ba — cùng một lớp bug tái xuất hiện ở UC-004
+
+Nghi ngờ lớp bug ở bước 8 (validate hình dạng chuỗi thay vì giá trị
+lịch thật) có thể lặp lại ở nơi khác dùng string date tương tự — thử
+`fromDate`/`toDate` của UC-004 với các giá trị khớp regex
+`YYYY-MM-DD` nhưng không phải ngày thật.
+
+Đúng như nghi ngờ: `fromDate=2026-13-45` **crash 500** — `@Matches`
+chỉ kiểm tra hình dạng chuỗi, không kiểm tra tháng/ngày có thật; giá trị
+này còn "lách" qua cả 2 check E1/E2 (so sánh string, không phải so sánh
+ngày) rồi mới vỡ ở Postgres (`22008`, giống hệt bug ở bước 8). Tệ hơn:
+`fromDate=2026-02-30` (30/2 không tồn tại) **không crash** nhưng bị
+`new Date(...)` tự động lăn qua 2/3 — chấp nhận một ngày sai mà không
+báo lỗi.
+
+```bash
+git commit -m "fix(UC-004): calendar-invalid dates like 2026-13-45 crashed with a raw 500"
+git push
+```
+
+Sửa bằng một validator dùng chung: `IsCalendarDate` (class-validator
+decorator) chuyển ngày qua `Date.UTC` rồi so khớp ngược lại — tháng/ngày
+không tồn tại bị từ chối, năm nhuận thật (29/2) vẫn được chấp nhận.
+Thay cả 2 `@Matches(DATE_PATTERN)` trên `CreateLeaveRequestDto`. Thêm
+`create-leave-request.dto.spec.ts` (5 test) — DTO này trước đó chưa có
+test riêng.
+
+Verify: 54/54 unit test pass, và qua HTTP thật — `2026-13-45` và
+`2026-02-30` đều bị từ chối với đúng message thay vì crash/âm thầm sai,
+ngày hợp lệ vẫn tạo đơn bình thường.
