@@ -332,7 +332,7 @@
       <span>Dự án <strong>hr-tool-demo</strong></span>
       <span>Chốt <strong>2026&#8209;08&#8209;06</strong> · cập nhật <strong>2026&#8209;08&#8209;09</strong></span>
       <span><strong>5</strong> ngày build log</span>
-      <span><strong>31</strong> commit</span>
+      <span><strong>33</strong> commit</span>
       <span><strong>5/5</strong> use case implement xong</span>
     </div>
   </section>
@@ -1298,6 +1298,51 @@ git push">COPY</button>
         <code>status=approved, approver_id=2</code> (Hà).</p>
       </div>
     </div>
+
+    <div class="step">
+      <div class="step-mark">8</div>
+      <div>
+        <h3>Thử lại lần nữa — dò từng exception path bằng tay, lộ ra 1 bug ở UC-006</h3>
+        <p>"Thử lại link xem còn bug gì không" lần này đi sâu hơn UI:
+        gọi thẳng từng exception path của cả 3 UC (E1&#8209;E4 của
+        UC&#8209;004, reject/approve sai quyền của UC&#8209;005, double
+        check&#8209;in/out của UC&#8209;002, tham số dị dạng của
+        UC&#8209;006) bằng <code>curl</code> với cookie session thật của
+        từng vai trò, thay vì chỉ bấm qua các luồng chính trên UI.</p>
+        <div class="callout gap">
+          <span class="tag">GAP</span>
+          <div>
+            <p><code>GET /api/reports/monthly?year=0</code> trả về
+            <strong>500 Internal Server Error</strong> thay vì "Năm
+            không hợp lệ". Controller chỉ check
+            <code>Number.isInteger(year)</code>, nên <code>year=0</code>
+            (và cả <code>year=""</code> — <code>Number('')</code> cũng
+            ra <code>0</code>) lọt qua, <code>monthDateRange()</code>
+            dựng chuỗi ngày dị dạng <code>"0-08-01"</code>, Postgres từ
+            chối bằng lỗi <code>22008 datetime field overflow</code>
+            chưa được bắt. Route này trước đó chưa có test nào.</p>
+          </div>
+        </div>
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="cmd-dots"><span></span><span></span><span></span></span>
+            <span class="cmd-label">terminal</span>
+            <button class="copy-btn" type="button" data-copy="git commit -m &quot;fix(UC-006): year=0/negative/empty crashed the report export with a raw 500&quot;
+git push">COPY</button>
+          </div>
+          <pre><code class="l">git commit -m "fix(UC-006): year=0/negative/empty crashed the report export with a raw 500"</code></pre>
+        </div>
+        <p style="margin-top:.8rem;">Sửa bằng cách giới hạn năm trong
+        khoảng 2000&#8209;2100 thay vì chỉ kiểm tra là số nguyên. Thêm
+        <code>reports.controller.spec.ts</code> (5 test): year=0, âm,
+        rỗng, quá lớn, và input hợp lệ.</p>
+        <p style="margin-top:.8rem;">Verify: <strong>49/49 unit test
+        pass</strong>, và qua HTTP thật —
+        <code>year=0</code>/<code>year=-5</code>/<code>year=""</code>
+        đều trả về đúng "Năm không hợp lệ" (400) thay vì 500,
+        <code>year=2026</code> vẫn xuất CSV bình thường.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ STRUCTURE ============ -->
@@ -1410,6 +1455,11 @@ git push">COPY</button>
           <td class="hash">7bb0785</td>
           <td class="msg">fix(UC-005): HR Director's pending list was missing manager-less requests</td>
         </tr>
+        <tr>
+          <td></td>
+          <td class="hash">d5dde5e</td>
+          <td class="msg">fix(UC-006): year=0/negative/empty crashed the report export with a raw 500</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -1419,10 +1469,11 @@ git push">COPY</button>
       <a class="repo" href="https://github.com/trhuyyy13/hr-tool-demo" target="_blank" rel="noopener">github.com/trhuyyy13/hr-tool-demo →</a>
       <p class="foot-note">
         5/5 use case từ BR-001 (Ngày 01) nay đều chạy được trên Postgres
-        thật, đã tự dùng thử qua UI thật — 5 gap thật vá dọc đường
-        (UC-005 HR Director khi tạo/duyệt đơn, UC-001 login picker, vai
-        trò vô hình ở UI duyệt đơn, thiếu lối quay lại trang chủ, và
-        danh sách chờ duyệt của HR Director bỏ sót đơn không có manager).
+        thật, đã tự dùng thử qua UI thật lẫn dò từng exception path bằng
+        tay — 6 gap thật vá dọc đường (UC-005 HR Director khi tạo/duyệt
+        đơn, UC-001 login picker, vai trò vô hình ở UI duyệt đơn, thiếu
+        lối quay lại trang chủ, danh sách chờ duyệt của HR Director bỏ
+        sót đơn không có manager, và UC-006 crash 500 với năm dị dạng).
       </p>
     </div>
   </footer>

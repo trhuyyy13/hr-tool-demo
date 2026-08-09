@@ -478,3 +478,32 @@ Verify: 44/44 unit test pass (thêm 2, không giảm test nào), và qua UI
 thật — Minh nộp đơn, đăng nhập lại bằng Hà → thấy cả đơn của Minh lẫn
 đơn của chính Hà trong hàng chờ, bấm Duyệt cho Minh → DB xác nhận
 `status=approved, approver_id=2` (Hà).
+
+### 8. Thử lại lần nữa — dò từng exception path bằng tay, lộ ra 1 bug ở UC-006
+
+"Thử lại link xem còn bug gì không" lần này đi sâu hơn UI: gọi thẳng
+từng exception path của cả 3 UC (E1-E4 của UC-004, reject/approve sai
+quyền của UC-005, double check-in/out của UC-002, tham số dị dạng của
+UC-006) bằng `curl` với cookie session thật của từng vai trò, thay vì
+chỉ bấm qua các luồng chính trên UI.
+
+Phần lớn đều đúng — trừ `GET /api/reports/monthly?year=0`: trả về
+**500 Internal Server Error** thay vì "Năm không hợp lệ". Nguyên nhân:
+controller chỉ check `Number.isInteger(year)`, nên `year=0` (và cả
+`year=""` — `Number('')` cũng ra `0`) lọt qua, `monthDateRange()` dựng
+chuỗi ngày dị dạng `"0-08-01"`, Postgres từ chối bằng lỗi
+`22008 datetime field overflow` chưa được bắt. Route này trước đó chưa
+có test nào.
+
+```bash
+git commit -m "fix(UC-006): year=0/negative/empty crashed the report export with a raw 500"
+git push
+```
+
+Sửa bằng cách giới hạn năm trong khoảng 2000-2100 thay vì chỉ kiểm tra
+là số nguyên. Thêm `reports.controller.spec.ts` (5 test): year=0, âm,
+rỗng, quá lớn, và input hợp lệ.
+
+Verify: 49/49 unit test pass, và qua HTTP thật — `year=0`/`year=-5`/
+`year=""` đều trả về đúng "Năm không hợp lệ" (400) thay vì 500,
+`year=2026` vẫn xuất CSV bình thường.
